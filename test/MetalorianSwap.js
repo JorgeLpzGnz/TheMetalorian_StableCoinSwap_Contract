@@ -28,7 +28,7 @@ describe("MetalorianSwap", function () {
 
       it("Should set the addresses of the tokens 1 ans 2", async () => {
 
-        const { metaSwap, USDT, USDC } = loadFixture( deplyMetalorianSwap )
+        const { metaSwap, USDT, USDC } = await loadFixture( deplyMetalorianSwap )
 
         const token1 = await metaSwap.token1()
 
