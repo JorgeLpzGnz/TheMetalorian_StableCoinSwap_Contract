@@ -17,4 +17,12 @@ contract Tether is ERC20 {
         
     }
 
+    function mint( uint _amount ) public returns ( bool ) {
+
+        _mint( msg.sender, _amount );
+
+        return true;
+        
+    }
+
 }
