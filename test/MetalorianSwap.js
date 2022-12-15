@@ -16,6 +16,28 @@ async function mintTokens(token, account, qty, metaSwap) {
 
 }
 
+async function getSwapEstimation( metaSwap, amount, tokenIn ) {
+
+	let totalTokenIn, totalTokenOut
+
+	if( tokenIn == "USDT"){
+
+		totalTokenIn = await metaSwap.totalToken1()
+		
+		totalTokenOut = await metaSwap.totalToken2()
+
+	} else {
+	
+		totalTokenIn = await metaSwap.totalToken2()
+	
+		totalTokenOut = await metaSwap.totalToken1()
+
+	}
+	
+	return await metaSwap.estimateSwap( amount, totalTokenIn, totalTokenOut )
+
+}
+
 describe("MetalorianSwap", function () {
 
 	async function deployMetalorianSwap() {
@@ -29,7 +51,7 @@ describe("MetalorianSwap", function () {
 		const USDC = await USDCf.deploy();
 
 		const MetalorianSwap = await ethers.getContractFactory("MetalorianSwap");
-		const metaSwap = await MetalorianSwap.deploy(USDC.address, USDT.address);
+		const metaSwap = await MetalorianSwap.deploy( USDT.address, USDC.address );
 
 		const USDTSupply = await USDT.totalSupply()
 		const USDCSupply = await USDC.totalSupply()
@@ -43,7 +65,7 @@ describe("MetalorianSwap", function () {
 
 	describe('constructor', () => {
 
-		describe("functionalities", () => {
+		describe("- functionalities", () => {
 
 			it("1. Should set the addresses of the tokens 1 ans 2", async () => {
 
@@ -65,7 +87,7 @@ describe("MetalorianSwap", function () {
 
 	describe('addLiquidity', () => {
 
-		describe("Errors", () => {
+		describe("- Errors", () => {
 
 			it("1. should fail if genesis amount is not equal", async () => {
 				const { metaSwap } = await loadFixture(deployMetalorianSwap)
@@ -95,7 +117,7 @@ describe("MetalorianSwap", function () {
 
 		})
 
-		describe("functionalities", () => {
+		describe("- functionalities", () => {
 
 			it( "1. Prove is adding new liquidity", async () => {
 
@@ -156,7 +178,7 @@ describe("MetalorianSwap", function () {
 
 	describe('removeLiquidity', () => {
 
-		describe("Errors", () => {
+		describe("- Errors", () => {
 
 			it("1. should fail if pool doesn't have founds", async () => {
 
@@ -217,7 +239,7 @@ describe("MetalorianSwap", function () {
 
 		})
 
-		describe("functionalities", () => {
+		describe("- functionalities", () => {
 
 			it( "1. Should remove liquidity", async () => {
 
@@ -313,7 +335,7 @@ describe("MetalorianSwap", function () {
 
 	describe('swap', () => {
 
-		describe("Errors", () => {
+		describe("- Errors", () => {
 
 			it("1. should fail if pool has no founds", async () => {
 
@@ -380,7 +402,7 @@ describe("MetalorianSwap", function () {
 
 		})
 
-		describe("functionalities", () => {
+		describe("- functionalities", () => {
 
 			it( "1. Make a Swap of token 1 for toke 2", async () => {
 
@@ -401,7 +423,7 @@ describe("MetalorianSwap", function () {
 
 				await metaSwap.addLiquidity(amount1, amount2)
 
-				const swapStimate = await metaSwap.estimateSwap( amount )
+				const swapStimate = await getSwapEstimation( metaSwap, amount, "USDT" )
 
 				await metaSwap.connect( otherAcount ).swap( USDT.address, amount )
 
@@ -432,8 +454,7 @@ describe("MetalorianSwap", function () {
 
 				await metaSwap.addLiquidity(amount1, amount2)
 
-				const swapStimate = await metaSwap.estimateSwap( amount )
-
+				const swapStimate = await getSwapEstimation( metaSwap, amount, "USDC" )
 				await metaSwap.connect( otherAcount ).swap( USDC.address, amount )
 
 				const bUSDTAfter = await USDT.balanceOf( otherAcount.address )
@@ -444,9 +465,9 @@ describe("MetalorianSwap", function () {
 
 			})
 
-			it( "1. updating balances", async () => {
+			it( "3. updating balances", async () => {
 
-				const { metaSwap, USDT, USDC, otherAcount } = await loadFixture(deployMetalorianSwap)
+				const { metaSwap, USDT, USDC } = await loadFixture(deployMetalorianSwap)
 
 				const amount = ethers.utils.parseUnits('120', 6)
 
@@ -464,7 +485,7 @@ describe("MetalorianSwap", function () {
 				expect( bUSDTBefore ).to.be.equal( totalT1Before )
 				expect( bUSDCBefore ).to.be.equal( totalT2Before )
 
-				const swapStimate = await metaSwap.estimateSwap( amount )
+				const swapStimate = await getSwapEstimation( metaSwap, amount, "USDT" )
 				await metaSwap.swap( USDT.address, amount )
 
 				const totalT1After = await metaSwap.totalToken1()
@@ -476,9 +497,37 @@ describe("MetalorianSwap", function () {
 				expect( bUSDTAfter ).to.be.equal( totalT1After )
 				expect( bUSDCAfter ).to.be.equal( totalT2After )
 				// x + dx
-				expect( totalT1Before + amount ).to.be.equal( totalT1After )
+				expect( totalT1Before.add( amount ) ).to.be.equal( totalT1After )
 				// y - dy
-				expect( totalT2After - swapStimate ).to.be.equal( totalT2After )
+				expect( totalT2Before.sub( swapStimate ) ).to.be.equal( totalT2After )
+
+			})
+
+			// update ?
+
+			it( "3. constant produnct", async () => {
+
+				const { metaSwap, USDT, USDC } = await loadFixture(deployMetalorianSwap)
+
+				const amount = ethers.utils.parseUnits('120', 6)
+
+				const amount1 = ethers.utils.parseUnits("50000000", 6)
+				const amount2 = ethers.utils.parseUnits("50000000", 6)
+
+				await metaSwap.addLiquidity(amount1, amount2)
+
+				const totalT1Before = await metaSwap.totalToken1()
+				const totalT2Before = await metaSwap.totalToken2()
+				const kBefore = await metaSwap.k()
+
+				expect( kBefore ).to.be.equal( totalT1Before.mul(totalT2Before) )
+				await metaSwap.swap( USDT.address, amount )
+
+				const totalT1After = await metaSwap.totalToken1()
+				const totalT2After = await metaSwap.totalToken2()
+				const kAfter = await metaSwap.k()
+
+				expect( kAfter ).to.be.equal( totalT1After.mul(totalT2After))
 
 			})
 

@@ -69,8 +69,6 @@ contract MetalorianSwap {
 
     function _updateBalances( uint _amountToken1, uint _amountToken2) private {
 
-        console.log(_amountToken1, _amountToken2);
-
         totalToken1 = _amountToken1;
 
         totalToken2 = _amountToken2;
@@ -89,11 +87,11 @@ contract MetalorianSwap {
 
     }
 
-    function estimateSwap( uint _amountIn ) public view returns ( uint amountOut ) {
+    function estimateSwap( uint _amountIn, uint _totalTokenIn, uint _totalTokenOut ) public pure returns ( uint amountOut ) {
 
-        uint amountWithFee = ( _amountIn * 997 ) / 1000;
+        uint amountInWithFee = ( _amountIn * 997 ) / 1000;
 
-        amountOut = ( totalToken2 * amountWithFee ) / ( totalToken1 + amountWithFee );
+        amountOut = ( _totalTokenOut * amountInWithFee ) / ( _totalTokenIn + amountInWithFee );
 
     }
 
@@ -128,7 +126,7 @@ contract MetalorianSwap {
 
         _mint( msg.sender, _shares );
 
-        _updateBalances( token1.balanceOf(address(this)), token2.balanceOf(address(this)) );
+        _updateBalances( totalToken1 + _token1, totalToken2 + _token2 );
 
     }
 
@@ -144,7 +142,7 @@ contract MetalorianSwap {
 
         _burn( msg.sender, _shares);
 
-        _updateBalances( token1.balanceOf(address(this)), token2.balanceOf(address(this)) );
+        _updateBalances( totalToken1 - amount1, totalToken2 - amount2 );
 
     }
 
@@ -154,21 +152,23 @@ contract MetalorianSwap {
 
         require( _amountIn > 0, "Swap Eror: Invalid input amount with value 0 ");
 
-        uint amountOut = estimateSwap( _amountIn );
-
-        require( _amountIn / amountOut < 2, "Swap Error: Price impact is more than 2x");
-
         bool isToken1 = _tokenIn == address(token1);
 
-        ( IERC20 tokenIn, IERC20 tokeOut ) = isToken1 
-            ? ( token1, token2 )
-            : ( token2, token1 );
+        ( IERC20 tokenIn, IERC20 tokeOut, uint _totalTokenIn, uint _totalTokenOut ) = isToken1 
+            ? ( token1, token2, totalToken1, totalToken2 )
+            : ( token2, token1, totalToken2, totalToken1 );
+
+        uint amountOut = estimateSwap( _amountIn, _totalTokenIn, _totalTokenOut );
+
+        require( _amountIn / amountOut < 2, "Swap Error: Price impact is more than 2x");
 
         require( tokenIn.transferFrom( msg.sender, address( this ), _amountIn));
 
         require( tokeOut.transfer( msg.sender, amountOut ));
 
-        _updateBalances( token1.balanceOf(address(this)), token2.balanceOf(address(this)) );
+        if ( isToken1 ) _updateBalances( totalToken1 + _amountIn, totalToken2 - amountOut );
+
+        else _updateBalances( totalToken1 - _amountIn, totalToken2 + amountOut );
 
     }
 
