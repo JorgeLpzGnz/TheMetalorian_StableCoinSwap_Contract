@@ -2,9 +2,10 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "hardhat/console.sol";
 
-contract MetalorianSwap {
+contract MetalorianSwap is ERC20 {
 
     IERC20 public immutable token1; // USDT
 
@@ -16,11 +17,13 @@ contract MetalorianSwap {
 
     uint public k; // constant product 
 
-    uint public totalShares;
+    // uint public totalShares;
 
-    mapping (address => uint) public shares;
+    // mapping (address => uint) public shares;
 
-    constructor (address _token1Address, address _token2Address) {
+    event Swap( address user, uint amountOut);
+
+    constructor (address _token1Address, address _token2Address) ERC20("Shares USDT USDC", "USDT/USDC.LP") {
 
         token1 = IERC20( _token1Address );
 
@@ -28,9 +31,15 @@ contract MetalorianSwap {
 
     }
 
+    function decimals() public pure override returns( uint8 ) {
+
+        return 6;
+        
+    }
+
     modifier isActive {
 
-        require( totalShares > 0, "Error: contract has no founds");
+        require( totalSupply() > 0, "Error: contract has no founds");
 
         _;
 
@@ -40,30 +49,21 @@ contract MetalorianSwap {
 
         require( _amount > 0, "Error: Invalid Amount, value = 0");
         
-        require( shares[ msg.sender ] >= _amount, "Error: your not an LP");
+        require( balanceOf( msg.sender ) >= _amount, "Error: your not an LP");
 
         _;
 
     }
 
-    function _mint( address _account, uint _amount ) private {
-
-        totalShares += _amount;
-
-        shares[ _account ] += _amount;
-
-    }
-
-    function _burn( address _account, uint _amount ) private {
-
-        totalShares -= _amount;
-
-        shares[ _account ] -= _amount;
-    }
-
     function _min( uint x, uint y ) private pure returns( uint ) {
 
         return x <= y ? x : y;
+
+    }
+
+    function _max( uint x, uint y ) private pure returns( uint ) {
+
+        return x >= y ? x : y;
 
     }
 
@@ -77,13 +77,45 @@ contract MetalorianSwap {
 
     }
 
+    function _handlePrecition( uint _amount1, uint _amount2 ) private pure returns( bool ) {
+
+        if ( _amount1 == _amount2) return true;
+
+        else return _min( _amount1, _amount2) + 1 == _max( _amount1, _amount2);
+
+    }
+
+    function estimateShares( uint _token1, uint _token2 ) public view returns ( uint _shares ) {
+
+        if( totalSupply() == 0) {
+
+            require( _token1 == _token2, "Error: Genesis Amounts must be the same" );
+
+            _shares = _token1;
+
+        } else {
+
+            uint share1 = (_token1 * totalSupply()) / totalToken1;
+
+            uint share2 = (_token2 * totalSupply()) / totalToken2;
+
+            require( _handlePrecition( share1, share2) , "Error: equivalent value not provided");
+            
+            _shares = _max( share1, share2 );
+            
+        }
+
+        require( _shares > 0, "Error: shares with zero value" );
+        
+    }
+
     function estimateWithdrawAmounts( uint _shares ) public view isActive returns( uint amount1, uint amount2 ) {
 
-        require ( _shares <= totalShares, "Error: insuficent shares");
+        require ( _shares <= totalSupply(), "Error: insuficent shares");
 
-        amount1 = ( totalToken1 * _shares ) / totalShares;
+        amount1 = ( totalToken1 * _shares ) / totalSupply();
 
-        amount2 = ( totalToken2 * _shares ) / totalShares;
+        amount2 = ( totalToken2 * _shares ) / totalSupply();
 
     }
 
@@ -93,27 +125,6 @@ contract MetalorianSwap {
 
         amountOut = ( _totalTokenOut * amountInWithFee ) / ( _totalTokenIn + amountInWithFee );
 
-    }
-
-    function estimateShares( uint _token1, uint _token2 ) public view returns ( uint _shares ) {
-
-        if( totalShares == 0) {
-
-            require( _token1 == _token2, "Error: Genesis Amounts must be the same" );
-
-            _shares = _token1;
-
-        } else {
-
-            require( totalToken1 * _token2 == totalToken2 * _token1, "Error: equivalent value not provided");
-            
-            _shares = _min(
-                (_token1 * totalShares) / totalToken1,
-                (_token2 * totalShares) / totalToken2
-            );
-            
-        }
-        
     }
 
     function addLiquidity( uint _token1, uint _token2 ) public returns ( uint _shares )  {
@@ -169,6 +180,8 @@ contract MetalorianSwap {
         if ( isToken1 ) _updateBalances( totalToken1 + _amountIn, totalToken2 - amountOut );
 
         else _updateBalances( totalToken1 - _amountIn, totalToken2 + amountOut );
+
+        emit Swap( msg.sender, amountOut);
 
     }
 
