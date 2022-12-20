@@ -17,11 +17,11 @@ contract MetalorianSwap is ERC20 {
 
     uint public k; // constant product 
 
-    // uint public totalShares;
+    event NewLiquidity( address liquidityProvider, uint amountToken1, uint amountToken2 );
 
-    // mapping (address => uint) public shares;
+    event LiquidityWithdraw( address liquidityProvider, uint amountToken1, uint amountToken2 );
 
-    event Swap( address user, uint amountOut);
+    event Swap( address user, uint amountIn, uint amountOut);
 
     constructor (address _token1Address, address _token2Address) ERC20("Shares USDT USDC", "USDT/USDC.LP") {
 
@@ -141,6 +141,8 @@ contract MetalorianSwap is ERC20 {
 
         _updateBalances( totalToken1 + _token1, totalToken2 + _token2 );
 
+        emit NewLiquidity( msg.sender, _token1, _token2 );
+
     }
 
     function removeLiquidity( uint _shares ) public isActive checkShares( _shares ) {
@@ -156,6 +158,8 @@ contract MetalorianSwap is ERC20 {
         _burn( msg.sender, _shares);
 
         _updateBalances( totalToken1 - amount1, totalToken2 - amount2 );
+
+        emit LiquidityWithdraw( msg.sender, amount1, amount2 );
 
     }
 
@@ -181,7 +185,7 @@ contract MetalorianSwap is ERC20 {
 
         else _updateBalances( totalToken1 - amountOut, totalToken2 + _amountIn );
 
-        emit Swap( msg.sender, amountOut);
+        emit Swap( msg.sender, _amountIn ,amountOut);
 
     }
 
