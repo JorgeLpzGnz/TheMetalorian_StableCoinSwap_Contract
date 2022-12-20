@@ -87,7 +87,7 @@ contract MetalorianSwap is ERC20 {
 
     function estimateShares( uint _token1, uint _token2 ) public view returns ( uint _shares ) {
 
-        if( totalSupply() == 0) {
+        if( totalSupply() == 0 ) {
 
             require( _token1 == _token2, "Error: Genesis Amounts must be the same" );
 
