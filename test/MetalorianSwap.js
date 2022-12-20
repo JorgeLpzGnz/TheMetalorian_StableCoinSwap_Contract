@@ -15,6 +15,8 @@ async function calculateDyPassingDx( metaSwap, _amount1 ) {
 	
 	const totalToken2 = await metaSwap.totalToken2()
 
+	if ( totalToken1 == 0 && totalToken2 == 0 ) return [ amount1, amount1 ]
+
 	const amount2 = totalToken2.mul( amount1 ).div( totalToken1 )
 
 	return [ amount1, amount2 ]
@@ -81,7 +83,7 @@ async function removeRamdomLiquidity( metaSwap ) {
 	
 }
 
-async function makeAletaoriesSwap( metaSwap, swapsQty, tokenAddres ) {
+async function makeAletaoriesSwap( metaSwap, swapsQty, tokens ) {
 
 	const signers = await ethers.getSigners()
 
@@ -92,14 +94,14 @@ async function makeAletaoriesSwap( metaSwap, swapsQty, tokenAddres ) {
 		if( signer == 19 ) signer = 2
 
 		const amount = ethers.utils.parseUnits(
-			`${  ( i * 100 ) + 1 }`, decimals
+			`${  Math.round( Math.random() * 1000 + 1 ) }`, decimals
 		)
 
-		const token = tokenAddres[ Math.round( Math.random() )]
+		const token = tokens[ Math.round( Math.random() ) ]
 
 		await mintTokens( token, signers[signer], amount, metaSwap )
 
-		await metaSwap.connect( signers[signer] ).swap( token.address, amount)
+		const tx = await metaSwap.connect( signers[signer] ).swap( token.address, amount)
 
 		signer++
 		
@@ -138,16 +140,16 @@ async function proveRandomSwap( metaSwap, tokens ) {
 
 		const amount = ethers.utils.parseUnits( `${ Math.round( Math.random() * 1000 + 1 ) }`, decimals);
 
-		const { tokenIn, tokenOut } = Math.round( Math.random() ) == 1
-		    ? ({ tokenIn: tokens[0], tokenOut: tokens[1] }) 
-			: ({ tokenIn:  tokens[1], tokenOut: tokens[0] })
-
 		const totalToken1 = await metaSwap.totalToken1()
 		const totalToken2 = await metaSwap.totalToken2()
 
+		const { tokenIn, tokenOut, totalIn, totalOut } = Math.round( Math.random() ) == 1
+		    ? ({ tokenIn: tokens[0], tokenOut: tokens[1], totalIn: totalToken1, totalOut: totalToken2 }) 
+			: ({ tokenIn:  tokens[1], tokenOut: tokens[0], totalIn: totalToken1, totalOut: totalToken2 })
+
 		const amountWithFee = amount.mul( 997 ).div( 1000 )
 
-		const amountOut = await totalToken2.mul( amountWithFee ).div( totalToken1.add( amountWithFee ) )
+		const amountOut = totalOut.mul( amountWithFee ).div( totalIn.add( amountWithFee ) )
 
 		await mintTokens( tokenIn, signers[i] , amount, metaSwap )
 
@@ -155,9 +157,11 @@ async function proveRandomSwap( metaSwap, tokens ) {
 
 		const balance = await tokenOut.balanceOf( signers[i].address )
 
-		console.log(amountOut, balance)
-
-		isEqual.push( amountOut == balance )
+		isEqual.push( 
+			Math.floor( Number( ethers.utils.formatUnits( amountOut ) ) )
+			== 
+			Math.floor( Number( ethers.utils.formatUnits( balance ) ) ) 
+		)
 		
 	}
 
@@ -211,6 +215,104 @@ describe("MetalorianSwap", function () {
 
 	})
 
+	describe('estimateShares', () => {
+
+		describe("- Errors", () => {
+
+			it("1. Should fail if genesis amount isn't equal", async () => {
+
+				const { metaSwap } = await loadFixture(deployMetalorianSwap)
+
+				const amount1 = ethers.utils.parseUnits( "120", decimals )
+
+				const amount2 = ethers.utils.parseUnits( "123", decimals )
+
+				await expect(
+					metaSwap.estimateShares( amount1, amount2 )
+				).to.be.revertedWith("Error: Genesis Amounts must be the same")
+
+			})
+
+			it("2. Should fail if amount has not equivalent value", async () => {
+
+				const { metaSwap, USDT, USDC } = await loadFixture(deployMetalorianSwap)
+
+				const amount1 = ethers.utils.parseUnits( "120000000", decimals )
+
+				const amount2 = ethers.utils.parseUnits( "120000000", decimals )
+
+				await metaSwap.addLiquidity( amount1, amount2 )
+
+				await makeAletaoriesSwap( metaSwap, 5, [ USDT, USDC ] )
+
+				await expect(
+					metaSwap.estimateShares( amount1, amount2 )
+				).to.be.revertedWith("Error: equivalent value not provided")
+
+			})
+
+			it("3. Should fail if return zero value", async () => {
+
+				const { metaSwap } = await loadFixture(deployMetalorianSwap)
+
+				await expect(
+					metaSwap.estimateShares( 0, 0 )
+				).to.be.revertedWith("Error: shares with zero value")
+
+			})
+
+		})
+
+		describe("- functionalities", () => {
+
+			it("1. Should return a shares amount", async () => {
+
+				const { metaSwap } = await loadFixture(deployMetalorianSwap)
+
+				const amount1 = ethers.utils.parseUnits( "1200000", decimals )
+
+				const amount2 = ethers.utils.parseUnits( "1200000", decimals )
+
+				const shares = await metaSwap.estimateShares( amount1, amount2 )
+
+				expect( shares ).to.be.greaterThan( 0 )
+
+			})
+
+			it("2. Should return a correct amount", async () => {
+
+				const { metaSwap } = await loadFixture(deployMetalorianSwap)
+
+				const amount1 = ethers.utils.parseUnits( "1200000", decimals )
+
+				const amount2 = ethers.utils.parseUnits( "1200000", decimals )
+
+				const shares = await metaSwap.estimateShares( amount1, amount2 )
+
+				expect( shares ).to.be.equal( amount1 )
+
+			})
+
+			// it("3. Prove return over the time", async () => {
+
+			// 	const { metaSwap, USDT, USDC } = await loadFixture(deployMetalorianSwap)
+
+			// 	await addRamdomLiquidity( metaSwap, USDT, USDC )
+
+			// 	await makeAletaoriesSwap(metaSwap, 20, [ USDT, USDC])
+
+			// 	const [ amount1, amount2 ] = await calculateDyPassingDx( metaSwap, 12000 )
+
+			// 	const shares = await metaSwap.estimateShares( amount1, amount2 )
+
+			// 	const [ a1, a2] = await metaSwap.estimateWithdrawAmounts( shares )
+
+			// })
+
+		})
+
+	})
+
 	describe('estimateWithdrawAmounts', () => {
 
 		describe("- Errors", () => {
@@ -242,8 +344,6 @@ describe("MetalorianSwap", function () {
 
 		})
 
-		// update
-
 		describe("- functionalities", () => {
 
 			it( "1. Prove returnal value is always the correct", async () => {
@@ -273,11 +373,95 @@ describe("MetalorianSwap", function () {
 				expect( amount1OutOA ).to.be.equal( amount1OthrAccount )
 				expect( amount2OutOA ).to.be.equal( amount2OthrAccount )
 
-				await makeAletaoriesSwap( 
-					metaSwap, 20, [ USDT, USDC ]
-				)
+				await makeAletaoriesSwap( metaSwap, 20, [ USDT, USDC ] )
+
+				await addRamdomLiquidity( metaSwap, USDT, USDC )
+
+				await removeRamdomLiquidity( metaSwap )
+
+				await makeAletaoriesSwap( metaSwap, 10, [ USDT, USDC ] )
+
+				await addRamdomLiquidity( metaSwap, USDT, USDC )
 
 				const [ amount1OutOAfter, amount2OutOAfter ] = await metaSwap.estimateWithdrawAmounts( amount1Owner )
+
+				expect( amount1OutOAfter.add(amount2OutOAfter)  ).to.be.greaterThanOrEqual( amount1Owner.add(amount2Owner))
+
+			})
+
+		})
+
+	})
+
+	describe('estimateSwap', () => {
+
+		describe("- Errors", () => {
+
+			it("1. Should fail if pass some cero value", async () => {
+
+				const { metaSwap } = await loadFixture(deployMetalorianSwap)
+
+				await expect(
+					metaSwap.estimateSwap( 0, 1, 1 )
+				).to.be.revertedWith("Swap Eror: Invalid input amount with value 0 ")
+
+				await expect(
+					metaSwap.estimateSwap( 1, 0, 1 )
+				).to.be.revertedWith("Swap Eror: Invalid input amount with value 0 ")
+
+				await expect(
+					metaSwap.estimateSwap( 1, 1, 0 )
+				).to.be.revertedWith("Swap Eror: Invalid input amount with value 0 ")
+
+			})
+
+		})
+
+		describe("- functionalities", () => {
+
+			it("1. Should return the amount out", async () => {
+
+				const { metaSwap } = await loadFixture(deployMetalorianSwap)
+
+				const amount = ethers.utils.parseUnits( "10", decimals )
+
+				const total1 = ethers.utils.parseUnits( "1200000", decimals )
+
+				const total2 = ethers.utils.parseUnits( "1200000", decimals )
+
+				const amountOut = await metaSwap.estimateSwap(
+					amount,
+					total1,
+					total2
+				)
+
+				expect( amountOut ).to.be.greaterThan( 0 )
+
+			})
+
+			it("2. Should return the correct value", async () => {
+
+				const { metaSwap } = await loadFixture(deployMetalorianSwap)
+
+				const amount = ethers.utils.parseUnits( "10", decimals )
+
+				const total1 = ethers.utils.parseUnits( "1200000", decimals )
+
+				const total2 = ethers.utils.parseUnits( "1200000", decimals )
+
+				const amountOut = await metaSwap.estimateSwap(
+					amount,
+					total1,
+					total2
+				)
+
+				const estimation = total2.mul( 
+					amount.mul(997).div( 1000 )
+				).div( total1.add( 
+					amount.mul(997).div( 1000 )) 
+				)
+
+				expect( amountOut ).to.be.equal( estimation )
 
 			})
 

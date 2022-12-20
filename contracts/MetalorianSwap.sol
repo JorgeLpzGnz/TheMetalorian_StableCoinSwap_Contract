@@ -101,7 +101,7 @@ contract MetalorianSwap is ERC20 {
 
             require( _handlePrecition( share1, share2) , "Error: equivalent value not provided");
             
-            _shares = _max( share1, share2 );
+            _shares = _min( share1, share2 );
             
         }
 
@@ -120,6 +120,8 @@ contract MetalorianSwap is ERC20 {
     }
 
     function estimateSwap( uint _amountIn, uint _totalTokenIn, uint _totalTokenOut ) public pure returns ( uint amountOut ) {
+
+        require( _amountIn > 0 && _totalTokenIn > 0 && _totalTokenOut > 0, "Swap Eror: Invalid input amount with value 0 ");
 
         uint amountInWithFee = ( _amountIn * 997 ) / 1000;
 
@@ -161,8 +163,6 @@ contract MetalorianSwap is ERC20 {
 
         require( _tokenIn == address(token1) || _tokenIn == address(token2), "Error: invalid token");
 
-        require( _amountIn > 0, "Swap Eror: Invalid input amount with value 0 ");
-
         bool isToken1 = _tokenIn == address(token1);
 
         ( IERC20 tokenIn, IERC20 tokeOut, uint _totalTokenIn, uint _totalTokenOut ) = isToken1 
@@ -179,7 +179,7 @@ contract MetalorianSwap is ERC20 {
 
         if ( isToken1 ) _updateBalances( totalToken1 + _amountIn, totalToken2 - amountOut );
 
-        else _updateBalances( totalToken1 - _amountIn, totalToken2 + amountOut );
+        else _updateBalances( totalToken1 - amountOut, totalToken2 + _amountIn );
 
         emit Swap( msg.sender, amountOut);
 
