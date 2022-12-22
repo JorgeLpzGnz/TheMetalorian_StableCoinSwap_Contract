@@ -139,6 +139,28 @@ async function getSwapEstimation( metaSwap, amount, tokenIn ) {
 
 }
 
+function min( x, y) {
+
+	return x < y ? x : y
+
+}
+
+function max( x, y) {
+
+	return x > y ? x : y
+	
+}
+
+function handlePrecition( x, y) {
+
+	if ( x == y) return true
+
+	console.log( min( x, y ), max( x, y))
+
+	return min( x, y ) + 1 == max( x, y)
+
+}
+
 // this prove the returnal value of aleatories swaps
 
 async function proveRandomSwap( metaSwap, tokens ) {
@@ -160,18 +182,23 @@ async function proveRandomSwap( metaSwap, tokens ) {
 
 		const amountWithFee = amount.mul( 997 ).div( 1000 )
 
+		const decimalsIn = ( await tokenIn.decimals() ) - 6
+
+		const decimalsOut = ( await tokenOut.decimals() ) - 6 
+
 		const amountOut = totalOut.mul( amountWithFee ).div( totalIn.add( amountWithFee ) )
 
-		await mintTokens( tokenIn, signers[i] , amount, metaSwap )
+		await mintTokens( tokenIn, signers[i] , amount.mul( 10 ** decimalsIn ), metaSwap )
 
 		await metaSwap.connect( signers[i] ).swap( tokenIn.address, amount)
 
 		const balance = await tokenOut.balanceOf( signers[i].address )
 
-		isEqual.push( 
-			Math.floor( Number( ethers.utils.formatUnits( amountOut ) ) )
-			== 
-			Math.floor( Number( ethers.utils.formatUnits( balance ) ) ) 
+        isEqual.push( 
+			handlePrecition( 
+				Math.round( Number( ethers.utils.formatUnits( amountOut, decimals ) ) ),
+				Math.round( Number( ethers.utils.formatUnits( balance.div( 10 ** decimalsOut ), decimals ) ) ) 
+			)
 		)
 		
 	}

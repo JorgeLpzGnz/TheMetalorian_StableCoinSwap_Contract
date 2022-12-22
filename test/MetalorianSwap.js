@@ -16,6 +16,7 @@ const {
     getSwapEstimation, 
     proveRandomSwap
 } = require("../utils/tools")
+const tokensABI = require("../utils/tokensABI.json")
 
 /****************************************************************************/
 /***************************** tools *************************************/
@@ -26,22 +27,53 @@ describe("MetalorianSwap", function () {
 
 		const [ owner, otherAcount ] = await ethers.getSigners()
 
-		const USDTf = await ethers.getContractFactory("Tether");
-		const USDT = await USDTf.deploy();
+		// const USDTf = await ethers.getContractFactory("Tether");
+		// const USDT = await USDTf.deploy();
 
-		const USDCf = await ethers.getContractFactory("USDCoin");
-		const USDC = await USDCf.deploy();
+		// const USDCf = await ethers.getContractFactory("USDCoin");
+		// const USDC = await USDCf.deploy();
+
+		// const BUSDf = await ethers.getContractFactory("BinanceUSD");
+		// const BUSD = await BUSDf.deploy();
+
+		const USDT = new ethers.Contract(
+			"0x948D917067BEF88203B095EcDFb92573401Ce7CE",
+			tokensABI,
+			owner
+		)
+
+		const USDC = new ethers.Contract(
+			"0xEC5b6c7973b67191c616bea8d2ABEaf934270896",
+			tokensABI,
+			owner
+		)
+
+		const BUSD = new ethers.Contract(
+			"0x48D153249EE2B08E6bB89cfE3923053d3130ba78",
+			tokensABI,
+			owner
+		)
 
 		const MetalorianSwap = await ethers.getContractFactory("MetalorianSwap");
 		const metaSwap = await MetalorianSwap.deploy( USDT.address, USDC.address );
 
+		const MS_BUSD_USDT_F = await ethers.getContractFactory("MetalorianSwap");
+		const MS_BUSD_USDT = await MS_BUSD_USDT_F.deploy(  BUSD.address, USDT.address );
+
 		const USDTSupply = await USDT.totalSupply()
 		const USDCSupply = await USDC.totalSupply()
+		const BUSDSupply = await BUSD.totalSupply()
 
-		await USDT.approve(metaSwap.address, USDTSupply)
-		await USDC.approve(metaSwap.address, USDCSupply)
+		await USDT.mint( USDCSupply )
+		await USDC.mint( USDCSupply )
+		await BUSD.mint( USDCSupply )
 
-		return { metaSwap, USDT, USDC, owner, otherAcount };
+		await USDT.approve( metaSwap.address, USDTSupply )
+		await USDC.approve( metaSwap.address, USDCSupply )
+		await BUSD.approve( MS_BUSD_USDT.address, BUSDSupply )
+		await USDT.approve( MS_BUSD_USDT.address, USDTSupply )
+
+		return { metaSwap, USDT, USDC, BUSD, owner, otherAcount, MS_BUSD_USDT };
 
 	}
 
@@ -388,7 +420,30 @@ describe("MetalorianSwap", function () {
 
 			})
 
-			it( "2. Prove is adding the shares", async () => {
+			it( "2. Prove is adding new liquidity in BUSD and USDT", async () => {
+
+				const { MS_BUSD_USDT, BUSD, USDT } = await loadFixture(deployMetalorianSwap)
+
+				const amount1 = ethers.utils.parseUnits("120", decimals)
+				const amount2 = ethers.utils.parseUnits("120", decimals)
+
+				await MS_BUSD_USDT.addLiquidity(amount1, amount2)
+
+				const totalToken1 = await MS_BUSD_USDT.totalToken1()
+				const totalToken2 = await MS_BUSD_USDT.totalToken2()
+
+				const BUSDBalance = await BUSD.balanceOf( MS_BUSD_USDT.address )
+				const USDTBalance = await USDT.balanceOf( MS_BUSD_USDT.address )
+
+				const k = await MS_BUSD_USDT.k()
+
+				expect( totalToken1 ).to.be.equal( USDTBalance )
+				expect( totalToken2 ).to.be.equal( BUSDBalance.div( 10e11 ) )
+				expect( k ).to.be.equal(totalToken1.mul(totalToken2))
+
+			})
+
+			it( "3. Prove is adding the shares", async () => {
 
 				const { metaSwap, owner, otherAcount, USDT, USDC } = await loadFixture(deployMetalorianSwap)
 
@@ -515,6 +570,34 @@ describe("MetalorianSwap", function () {
 
 			})
 
+			it( "1. Should remove liquidity of BUSD and USDT", async () => {
+
+				const { MS_BUSD_USDT, USDT, BUSD, otherAcount } = await loadFixture( deployMetalorianSwap )
+
+				const amount1 = ethers.utils.parseUnits("12000", decimals)
+				const amount2 = ethers.utils.parseUnits("12000", decimals)
+
+				await mintTokens( BUSD, otherAcount, amount1.mul( 10e11 ), MS_BUSD_USDT )
+				await mintTokens( USDT, otherAcount, amount2, MS_BUSD_USDT )
+
+				await MS_BUSD_USDT.connect(otherAcount).addLiquidity(amount1, amount2)
+
+				const zbUSDT = await USDT.balanceOf( otherAcount.address )
+				const zbBUSD = await BUSD.balanceOf( otherAcount.address )
+
+				expect( zbBUSD ).to.be.equal( 0 )
+				expect( zbUSDT ).to.be.equal( 0 )
+
+				await MS_BUSD_USDT.connect(otherAcount).removeLiquidity( amount1 )
+
+				const bUSDT = await USDT.balanceOf( otherAcount.address )
+				const bBUSD = await BUSD.balanceOf( otherAcount.address )
+
+				expect( bBUSD ).to.be.equal( amount1.mul( 10e11 ) )
+				expect( bUSDT ).to.be.equal( amount2 )
+
+			})
+
 			it( "2. Prove is burnig the shares", async () => {
 
 				const { metaSwap, owner } = await loadFixture(deployMetalorianSwap)
@@ -616,8 +699,6 @@ describe("MetalorianSwap", function () {
 
 				await mintTokens( USDT, otherAcount, amountsAO[0], metaSwap)
 				await mintTokens( USDC, otherAcount, amountsAO[1], metaSwap)
-
-				console.log( ethers.utils.formatUnits( amountsAO[0].add(amountsAO[1]), decimals ) )
 
 				await metaSwap
 				    .connect( otherAcount )
@@ -788,7 +869,70 @@ describe("MetalorianSwap", function () {
 
 			})
 
-			it( "3. updating balances swapping token 1 for token 2", async () => {
+			it( "3. Make a Swap of BUSD for toke USDT", async () => {
+
+				const { MS_BUSD_USDT, USDT, BUSD, otherAcount } = await loadFixture(deployMetalorianSwap)
+
+				const amount = ethers.utils.parseUnits('120', decimals)
+
+				const amount1 = ethers.utils.parseUnits("50000000", decimals)
+				const amount2 = ethers.utils.parseUnits("50000000", decimals)
+
+				await mintTokens( BUSD, otherAcount, amount.mul( 1e12 ), MS_BUSD_USDT )
+
+				const bUSDTBefore = await USDT.balanceOf( otherAcount.address )
+				const bBUSDBefore = await BUSD.balanceOf( otherAcount.address )
+
+				// prove balances
+
+				expect( bBUSDBefore ).to.be.equal( amount.mul( 1e12 ) )
+				expect( bUSDTBefore ).to.be.equal( 0 )
+
+				await MS_BUSD_USDT.addLiquidity(amount1, amount2)
+
+				const swapStimate = await getSwapEstimation( MS_BUSD_USDT, amount, "USDT" )
+
+				await MS_BUSD_USDT.connect( otherAcount ).swap( BUSD.address, amount )
+
+				const bBUSDAfter = await BUSD.balanceOf( otherAcount.address )
+				const bUSDTAfter = await USDT.balanceOf( otherAcount.address )
+
+				expect( bBUSDAfter ).to.be.equal( 0 )
+				expect( bUSDTAfter ).to.be.equal( swapStimate )
+
+			})
+
+			it( "4. Make a Swap of token USDT for token BUSD", async () => {
+
+				const { MS_BUSD_USDT, USDT, BUSD, otherAcount } = await loadFixture(deployMetalorianSwap)
+
+				const amount = ethers.utils.parseUnits('120', decimals)
+
+				const amount1 = ethers.utils.parseUnits("50000000", decimals)
+				const amount2 = ethers.utils.parseUnits("50000000", decimals)
+
+				await mintTokens( USDT, otherAcount, amount, MS_BUSD_USDT )
+
+				const bBUSDBefore = await BUSD.balanceOf( otherAcount.address )
+				const bUSDTBefore = await USDT.balanceOf( otherAcount.address )
+
+				expect( bUSDTBefore ).to.be.equal( amount )
+				expect( bBUSDBefore ).to.be.equal( 0 )
+
+				await MS_BUSD_USDT.addLiquidity(amount1, amount2)
+
+				const swapStimate = await getSwapEstimation( MS_BUSD_USDT, amount, "USDC" )
+				await MS_BUSD_USDT.connect( otherAcount ).swap( USDT.address, amount )
+
+				const bUSDTAfter = await USDT.balanceOf( otherAcount.address )
+				const bBUSDAfter = await BUSD.balanceOf( otherAcount.address )
+
+				expect( bBUSDAfter ).to.be.equal( swapStimate.mul( 1e12 ) )
+				expect( bUSDTAfter ).to.be.equal( 0 )
+
+			})
+
+			it( "5. updating balances swapping token 1 for token 2", async () => {
 
 				const { metaSwap, USDT, USDC } = await loadFixture(deployMetalorianSwap)
 
@@ -830,7 +974,7 @@ describe("MetalorianSwap", function () {
 
 			})
 
-			it( "3. updating balances swapping token 2 for token 1", async () => {
+			it( "6. updating balances swapping token 2 for token 1", async () => {
 
 				const { metaSwap, USDT, USDC } = await loadFixture(deployMetalorianSwap)
 
@@ -874,7 +1018,7 @@ describe("MetalorianSwap", function () {
 
 			// update ?
 
-			it( "4. constant produnct", async () => {
+			it( "7. constant produnct", async () => {
 
 				const { metaSwap, USDT } = await loadFixture(deployMetalorianSwap)
 
@@ -900,7 +1044,7 @@ describe("MetalorianSwap", function () {
 
 			})
 
-			it( "5. Prove returnal value", async () => {
+			it( "8. Prove returnal value", async () => {
 
 				const { metaSwap, USDT, USDC } = await loadFixture(deployMetalorianSwap)
 
@@ -912,6 +1056,21 @@ describe("MetalorianSwap", function () {
 				const prove = await proveRandomSwap( metaSwap, [ USDT, USDC ])
 
 				expect( prove ).to.be.true
+
+			})
+
+			it( "9. Prove returnal value in BUSD USDC", async () => {
+
+				const { MS_BUSD_USDT, USDT, BUSD } = await loadFixture(deployMetalorianSwap)
+
+				const amount1 = ethers.utils.parseUnits("50000000", decimals)
+				const amount2 = ethers.utils.parseUnits("50000000", decimals)
+
+				await MS_BUSD_USDT.addLiquidity(amount1, amount2)
+
+				const prove2 = await proveRandomSwap( MS_BUSD_USDT, [ USDT, BUSD ])
+
+				expect( prove2 ).to.be.true
 
 			})
 

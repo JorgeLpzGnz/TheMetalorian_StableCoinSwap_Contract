@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "hardhat/console.sol";
 
 contract MetalorianSwap is ERC20 {
 
-    IERC20 public immutable token1; // USDT
+    IERC20Metadata public immutable token1; // USDT
 
-    IERC20 public immutable token2; // USDC
+    IERC20Metadata public immutable token2; // USDC
 
     uint public totalToken1;
 
@@ -25,9 +26,9 @@ contract MetalorianSwap is ERC20 {
 
     constructor (address _token1Address, address _token2Address) ERC20("Shares USDT USDC", "USDT/USDC.LP") {
 
-        token1 = IERC20( _token1Address );
+        token1 = IERC20Metadata( _token1Address );
 
-        token2 = IERC20( _token2Address );
+        token2 = IERC20Metadata( _token2Address );
 
     }
 
@@ -85,6 +86,14 @@ contract MetalorianSwap is ERC20 {
 
     }
 
+    function _handleDecimals( uint _amount, uint8 _decimals ) private pure returns( uint ) {
+
+        if ( _decimals > 6 ) return _amount * 10 ** ( _decimals - 6 );
+
+        else return _amount;
+        
+    }
+
     function estimateShares( uint _token1, uint _token2 ) public view returns ( uint _shares ) {
 
         if( totalSupply() == 0 ) {
@@ -133,9 +142,9 @@ contract MetalorianSwap is ERC20 {
 
         _shares = estimateShares( _token1, _token2 );
 
-        require(token1.transferFrom( msg.sender, address( this ), _token1 ));
+        require(token1.transferFrom( msg.sender, address( this ), _handleDecimals(_token1, token1.decimals()) ));
 
-        require(token2.transferFrom( msg.sender, address( this ), _token2 ));
+        require(token2.transferFrom( msg.sender, address( this ), _handleDecimals(_token2, token2.decimals()) ));
 
         _mint( msg.sender, _shares );
 
@@ -151,9 +160,9 @@ contract MetalorianSwap is ERC20 {
 
         require( amount1 > 0 && amount2 > 0, "Error: amounts with zero value");
 
-        require( token1.transfer( msg.sender, amount1 ) );
+        require( token1.transfer( msg.sender, _handleDecimals( amount1, token1.decimals() )  ) );
 
-        require( token2.transfer( msg.sender, amount2 ) );
+        require( token2.transfer( msg.sender, _handleDecimals( amount2, token2.decimals() ) ) );
 
         _burn( msg.sender, _shares);
 
@@ -169,7 +178,7 @@ contract MetalorianSwap is ERC20 {
 
         bool isToken1 = _tokenIn == address(token1);
 
-        ( IERC20 tokenIn, IERC20 tokeOut, uint _totalTokenIn, uint _totalTokenOut ) = isToken1 
+        ( IERC20Metadata tokenIn, IERC20Metadata tokeOut, uint _totalTokenIn, uint _totalTokenOut ) = isToken1 
             ? ( token1, token2, totalToken1, totalToken2 )
             : ( token2, token1, totalToken2, totalToken1 );
 
@@ -177,9 +186,9 @@ contract MetalorianSwap is ERC20 {
 
         require( _amountIn / amountOut < 2, "Swap Error: Price impact is more than 2x");
 
-        require( tokenIn.transferFrom( msg.sender, address( this ), _amountIn));
+        require( tokenIn.transferFrom( msg.sender, address( this ), _handleDecimals( _amountIn, tokenIn.decimals() ) ));
 
-        require( tokeOut.transfer( msg.sender, amountOut ));
+        require( tokeOut.transfer( msg.sender, _handleDecimals( amountOut, tokeOut.decimals() ) ));
 
         if ( isToken1 ) _updateBalances( totalToken1 + _amountIn, totalToken2 - amountOut );
 
