@@ -155,8 +155,6 @@ function handlePrecition( x, y) {
 
 	if ( x == y) return true
 
-	console.log( min( x, y ), max( x, y))
-
 	return min( x, y ) + 1 == max( x, y)
 
 }

@@ -2,11 +2,12 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "hardhat/console.sol";
 
-contract MetalorianSwap is ERC20 {
+contract MetalorianSwap is ERC20, Ownable {
 
     IERC20Metadata public immutable token1; // USDT
 
@@ -18,13 +19,15 @@ contract MetalorianSwap is ERC20 {
 
     uint public k; // constant product 
 
+    uint16 public maxTradePorcentage = 200;
+
     event NewLiquidity( address liquidityProvider, uint amountToken1, uint amountToken2 );
 
     event LiquidityWithdraw( address liquidityProvider, uint amountToken1, uint amountToken2 );
 
     event Swap( address user, uint amountIn, uint amountOut);
 
-    constructor (address _token1Address, address _token2Address) ERC20("Shares USDT USDC", "USDT/USDC.LP") {
+    constructor (address _token1Address, address _token2Address, string memory _name) ERC20( _name, _name ) {
 
         token1 = IERC20Metadata( _token1Address );
 
@@ -92,6 +95,20 @@ contract MetalorianSwap is ERC20 {
 
         else return _amount;
         
+    }
+
+    function setTradePorcentage( uint8 _newTradePorcentage ) public onlyOwner returns ( bool ) {
+
+        maxTradePorcentage = _newTradePorcentage;
+
+        return true;
+
+    }
+
+    function maxTrade( uint _totalTokenOut ) public view returns ( uint maxTradeAmount ) {
+
+        maxTradeAmount = ( _totalTokenOut * maxTradePorcentage ) / 1000;
+
     }
 
     function estimateShares( uint _token1, uint _token2 ) public view returns ( uint _shares ) {
@@ -184,7 +201,7 @@ contract MetalorianSwap is ERC20 {
 
         uint amountOut = estimateSwap( _amountIn, _totalTokenIn, _totalTokenOut );
 
-        require( _amountIn / amountOut < 2, "Swap Error: Price impact is more than 2x");
+        require( amountOut <= maxTrade( _totalTokenOut ), "Swap Error: output value is greater than the limit");
 
         require( tokenIn.transferFrom( msg.sender, address( this ), _handleDecimals( _amountIn, tokenIn.decimals() ) ));
 

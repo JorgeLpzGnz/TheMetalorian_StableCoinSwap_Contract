@@ -11,21 +11,21 @@ async function main() {
   const testBUSD = "0x48D153249EE2B08E6bB89cfE3923053d3130ba78"
 
   const MS_USDT_USDC_F = await ethers.getContractFactory("MetalorianSwap");
-  const MS_USDT_USDC = await MS_USDT_USDC_F.deploy( testUSDT, testUSDC );
+  const MS_USDT_USDC = await MS_USDT_USDC_F.deploy( testUSDT, testUSDC, "USDTUSDC_LP" );
   await MS_USDT_USDC.deployed();
 
   const MS_USDC_BUSD_F = await ethers.getContractFactory("MetalorianSwap");
-  const MS_USDC_BUSD = await MS_USDC_BUSD_F.deploy( testUSDC, testBUSD );
+  const MS_USDC_BUSD = await MS_USDC_BUSD_F.deploy( testUSDC, testBUSD, "USDCBUSD_LP" );
   await MS_USDC_BUSD.deployed();
 
-  const MS_BUSD_USDC_F = await ethers.getContractFactory("MetalorianSwap");
-  const MS_BUSD_USDC = await MS_BUSD_USDC_F.deploy( testBUSD, testUSDT );
-  await MS_BUSD_USDC.deployed();
+  const MS_BUSD_USDT_F = await ethers.getContractFactory("MetalorianSwap");
+  const MS_BUSD_USDT = await MS_BUSD_USDT_F.deploy( testBUSD, testUSDT, "BUSDUSDC_LP" );
+  await MS_BUSD_USDT.deployed();
 
   console.log( `
   MetalorianSwap USDT / USDC ${MS_USDT_USDC.address}
   MetalorianSwap USDC / BUSD ${MS_USDC_BUSD.address}
-  MetalorianSwap BUSD / USDT ${MS_BUSD_USDC.address}`);
+  MetalorianSwap BUSD / USDT ${MS_BUSD_USDT.address}`);
   
 }
 

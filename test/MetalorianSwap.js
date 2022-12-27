@@ -55,10 +55,10 @@ describe("MetalorianSwap", function () {
 		)
 
 		const MetalorianSwap = await ethers.getContractFactory("MetalorianSwap");
-		const metaSwap = await MetalorianSwap.deploy( USDT.address, USDC.address );
+		const metaSwap = await MetalorianSwap.deploy( USDT.address, USDC.address, "USDT_USDC_LP" );
 
 		const MS_BUSD_USDT_F = await ethers.getContractFactory("MetalorianSwap");
-		const MS_BUSD_USDT = await MS_BUSD_USDT_F.deploy(  BUSD.address, USDT.address );
+		const MS_BUSD_USDT = await MS_BUSD_USDT_F.deploy(  BUSD.address, USDT.address, "BUSD_USDT_LP" );
 
 		const USDTSupply = await USDT.totalSupply()
 		const USDCSupply = await USDC.totalSupply()
@@ -785,20 +785,22 @@ describe("MetalorianSwap", function () {
 
 			// update
 
-			it("4. Should fail if price impact is more than the double", async () => {
+			it("4. Should fail if price impact is more than trade limit", async () => {
 
 				const { metaSwap, USDT } = await loadFixture( deployMetalorianSwap )
-
-				const amount = ethers.utils.parseUnits('120', decimals)
 
 				const amount1 = ethers.utils.parseUnits("120", decimals)
 				const amount2 = ethers.utils.parseUnits("120", decimals)
 
 				await metaSwap.addLiquidity(amount1, amount2)
 
+				const maxTrade = await metaSwap.maxTrade(amount2)
+
+				const amountIn = amount1.mul( maxTrade ).div( amount2.sub( maxTrade  ))
+
 				await expect( 
-					metaSwap.swap( USDT.address, amount )
-				).to.be.revertedWith("Swap Error: Price impact is more than 2x")
+					metaSwap.swap( USDT.address, amountIn.add( 1e6 ) )
+				).to.be.revertedWith("Swap Error: output value is greater than the limit")
 
 			})
 
