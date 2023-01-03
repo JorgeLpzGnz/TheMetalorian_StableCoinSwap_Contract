@@ -38,6 +38,17 @@ contract MetalorianSwap is ERC20, Ownable {
     //// @dev that maximum will be this settable percentage of the respective token reserves
     uint16 public maxTradePercentage = 1000;
 
+    //// @notice all the pool info ( used in getPoolInfo )
+    struct PoolInfo {
+        IERC20Metadata token1;
+        IERC20Metadata token2;
+        uint totalToken1;
+        uint totalToken2;
+        uint16 tradeFee;
+        uint16 protocolFee;
+        uint16 maxTradePercentage;
+    }
+
     /**************************************************************/
     /*************************** EVENTS ***************************/
 
@@ -232,6 +243,24 @@ contract MetalorianSwap is ERC20, Ownable {
     }
 
     /**************************************************************/
+    /*********************** VIEW FUNCTIONS ***********************/
+
+    //// @notice it returns the current pool info
+    function getPoolInfo() public view returns( PoolInfo memory _poolInfo ) {
+
+        _poolInfo = PoolInfo({
+            token1: token1,
+            token2: token2,
+            totalToken1: totalToken1,
+            totalToken2: totalToken2,
+            tradeFee: tradeFee,
+            protocolFee: protocolFee,
+            maxTradePercentage: maxTradePercentage
+        });
+    
+    }
+
+    /**************************************************************/
     /*********************** SET FUNCTIONS ************************/
 
     //// @dev to calculate how much pass to the new percetages
@@ -280,9 +309,9 @@ contract MetalorianSwap is ERC20, Ownable {
     //// @notice add new liquidity
     //// @param _token1 amount of token 1
     //// @param _token2 amount of token 2
-    function addLiquidity( uint _token1, uint _token2 ) public returns ( uint _shares )  {
+    function addLiquidity( uint _token1, uint _token2 ) public returns ( bool )  {
 
-        _shares = estimateShares( _token1, _token2 );
+        uint _shares = estimateShares( _token1, _token2 );
 
         require(token1.transferFrom( msg.sender, address( this ), _handleDecimals(_token1, token1.decimals()) ));
 
@@ -294,11 +323,13 @@ contract MetalorianSwap is ERC20, Ownable {
 
         emit NewLiquidity( msg.sender, _token1, _token2 );
 
+        return true;
+
     }
 
     //// @notice remove liquidity
     //// @param _shares amount of LP tokens 
-    function removeLiquidity( uint _shares ) public isActive checkShares( _shares ) {
+    function removeLiquidity( uint _shares ) public isActive checkShares( _shares ) returns( bool ){
 
         ( uint amount1, uint amount2 ) = estimateWithdrawAmounts( _shares );
 
@@ -314,12 +345,14 @@ contract MetalorianSwap is ERC20, Ownable {
 
         emit LiquidityWithdraw( msg.sender, amount1, amount2 );
 
+        return true;
+
     }
 
     //// @notice trade tokens
     //// @param _tokenIn the address of the input token 
     //// @param _amountIn the amount of input token
-    function swap( address _tokenIn, uint _amountIn ) public isActive {
+    function swap( address _tokenIn, uint _amountIn ) public isActive returns( bool ) {
 
         require( _tokenIn == address(token1) || _tokenIn == address(token2), "Trade Error: invalid token");
 
@@ -342,6 +375,8 @@ contract MetalorianSwap is ERC20, Ownable {
         else _updateBalances( totalToken1 - amountOut, totalToken2 + amountIn );
 
         emit Swap( msg.sender, _amountIn ,amountOut);
+
+        return true;
 
     }
 
