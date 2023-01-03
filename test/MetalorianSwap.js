@@ -102,6 +102,30 @@ describe("MetalorianSwap", function () {
 
 	})
 
+	describe('getPoolInfo', () => {
+
+		describe("- functionalities", () => {
+
+			it("1. Should return the current info", async () => {
+
+				const { metaSwap, USDT, USDC } = await loadFixture(deployMetalorianSwap)
+
+				const currInfo = await metaSwap.getPoolInfo()
+
+				expect( currInfo.token1 ).to.be.equal( USDT.address )
+				expect( currInfo.token2 ).to.be.equal( USDC.address )
+				expect( currInfo.totalToken1 ).to.be.equal( 0 )
+				expect( currInfo.totalToken2 ).to.be.equal( 0 )
+				expect( currInfo.tradeFee ).to.be.equal( 30 )
+				expect( currInfo.protocolFee ).to.be.equal( 5 )
+				expect( currInfo.maxTradePercentage ).to.be.equal( 1000 )
+
+			})
+
+		})
+
+	})
+
 	describe('setProtocolFee', () => {
 
 		describe("- Errors", () => {
