@@ -167,6 +167,10 @@ async function proveRandomSwap( metaSwap, tokens ) {
 
 	const isEqual = []
 
+	const tradeFee = await metaSwap.tradeFee()
+
+	const protocolFee = await metaSwap.protocolFee()
+
 	for (let i = 1; i < signers.length; i++) {
 
 		const amount = ethers.utils.parseUnits( `${ Math.round( Math.random() * 1000 + 1 ) }`, decimals);
@@ -178,7 +182,7 @@ async function proveRandomSwap( metaSwap, tokens ) {
 		    ? ({ tokenIn: tokens[0], tokenOut: tokens[1], totalIn: totalToken1, totalOut: totalToken2 }) 
 			: ({ tokenIn:  tokens[1], tokenOut: tokens[0], totalIn: totalToken1, totalOut: totalToken2 })
 
-		const amountWithFee = amount.mul( 997 ).div( 1000 )
+		const amountWithFee = amount.mul( 10000 - ( tradeFee + protocolFee ) ).div( 10000 )
 
 		const decimalsIn = ( await tokenIn.decimals() ) - 6
 
