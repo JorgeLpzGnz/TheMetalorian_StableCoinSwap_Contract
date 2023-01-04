@@ -50,7 +50,7 @@ async function mintTokens(token, account, amount, metaSwap) {
 
 // this will add randomly liquidity
 
-async function addRamdomLiquidity( metaSwap, USDT, USDC ) {
+async function addRandomLiquidity( metaSwap, USDT, USDC ) {
 
 	const signers = await ethers.getSigners()
 
@@ -72,7 +72,7 @@ async function addRamdomLiquidity( metaSwap, USDT, USDC ) {
 
 // this will remove randomly liquidity
 
-async function removeRamdomLiquidity( metaSwap ) {
+async function removeRandomLiquidity( metaSwap ) {
 
 	const signers = await ethers.getSigners()
 
@@ -90,7 +90,7 @@ async function removeRamdomLiquidity( metaSwap ) {
 
 // this will wake random swaps betwen toke1 and token2 and vice versa
 
-async function makeAletaoriesSwap( metaSwap, swapsQty, tokens ) {
+async function makeRandomSwap( metaSwap, swapsQty, tokens ) {
 
 	const signers = await ethers.getSigners()
 
@@ -213,9 +213,9 @@ module.exports = {
     calculateDyPassingDx, 
     calculateReward, 
     mintTokens, 
-    addRamdomLiquidity,
-    removeRamdomLiquidity, 
-    makeAletaoriesSwap, 
+    addRandomLiquidity,
+    removeRandomLiquidity, 
+    makeRandomSwap, 
     getSwapEstimation, 
     proveRandomSwap
 }
