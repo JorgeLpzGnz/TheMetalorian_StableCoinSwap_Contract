@@ -157,8 +157,7 @@ contract MetalorianSwap is ERC20, Ownable {
     //// this to handle possible precision errors
     //// @param x amount 1
     //// @param y amount 2
-    // change name handleExactitude
-    function _isEqual( uint x, uint y ) private pure returns( bool ) {
+    function _isEqual( uint x, uint y ) private pure returns ( bool ) {
 
         if ( x == y) return true;
 
@@ -169,8 +168,7 @@ contract MetalorianSwap is ERC20, Ownable {
     //// @notice it multiply the amount by the respective ERC20 decimal representation
     //// @param _amount the amount to multiply
     //// @param _decimals the decimals representation to multiply 
-    function _handleDecimals( uint _amount, uint8 _decimals ) private pure returns( uint ) {
-
+    function _handleDecimals( uint _amount, uint8 _decimals ) private pure returns ( uint ) {
         
         if ( _decimals > 6 ) return _amount * 10 ** ( _decimals - 6 );
 
@@ -187,22 +185,26 @@ contract MetalorianSwap is ERC20, Ownable {
     }
 
     //// @notice returns how much shares ( LP tokens ) send to user
-    //change add dev message
-    //// @param _token1 amount of token 1
-    //// @param _token2 amount of token 2
-    function estimateShares( uint _token1, uint _token2 ) public view returns ( uint _shares ) {
+    //// @dev amount1 and amount2 must have the same proportion in relation to reserves
+    //// @dev use this formula to calculate _amountToken1 and _amountToken2
+    //// x = totalToken1, y = totalToken2, dx = amount of token 1, dy = amount of token 2
+    //// dx = x * dy / y to prioritize amount of token 1
+    //// dy = y * dx / x to prioritize amount of token 2
+    //// @param _amountToken1 amount of token 1 to add at the pool
+    //// @param _amountToken2 amount of token 2 to add at the pool
+    function estimateShares( uint _amountToken1, uint _amountToken2 ) public view returns ( uint _shares ) {
 
         if( totalSupply() == 0 ) {
 
-            require( _token1 == _token2, "Error: Genesis Amounts must be the same" );
+            require( _amountToken1 == _amountToken2, "Error: Genesis Amounts must be the same" );
 
-            _shares = _token1;
+            _shares = _amountToken1;
 
         } else {
 
-            uint share1 = (_token1 * totalSupply()) / totalToken1;
+            uint share1 = (_amountToken1 * totalSupply()) / totalToken1;
 
-            uint share2 = (_token2 * totalSupply()) / totalToken2;
+            uint share2 = (_amountToken2 * totalSupply()) / totalToken2;
 
             require( _isEqual( share1, share2) , "Error: equivalent value not provided");
             
@@ -229,22 +231,18 @@ contract MetalorianSwap is ERC20, Ownable {
     //// @notice returns the amount of the output token returned in an operation
     //// @param _amountIn amount of token input 
     //// @param _totalTokenIn total reserves of token input 
-    //change description = total reserves of token output
     //// @param _totalTokenOut total reserves of token output
     function estimateSwap( uint _amountIn, uint _totalTokenIn, uint _totalTokenOut ) public view returns ( uint amountIn, uint amountOut, uint creatorFee ) {
 
         require( _amountIn > 0 && _totalTokenIn > 0 && _totalTokenOut > 0, "Swap Error: Input amount with 0 value not valid");
         
-        //change variable name = amountInWithoutFee
-        uint amountInWithFee = ( _amountIn * ( 10000 - ( tradeFee + protocolFee ) ) ) / 10000;
+        uint amountInWithoutFee = ( _amountIn * ( 10000 - ( tradeFee + protocolFee ) ) ) / 10000;
 
-        //change = confirmarlo con Julian
         creatorFee = ( _amountIn * protocolFee ) / 10000;
 
         amountIn = _amountIn - creatorFee ;
-
         
-        amountOut = ( _totalTokenOut * amountInWithFee ) / ( _totalTokenIn + amountInWithFee );
+        amountOut = ( _totalTokenOut * amountInWithoutFee ) / ( _totalTokenIn + amountInWithoutFee );
 
         require( amountOut <= maxTrade( _totalTokenOut ), "Swap Error: output value is greater than the limit");
 
@@ -254,7 +252,7 @@ contract MetalorianSwap is ERC20, Ownable {
     /*********************** VIEW FUNCTIONS ***********************/
 
     //// @notice it returns the current pool info
-    function getPoolInfo() public view returns( PoolInfo memory _poolInfo ) {
+    function getPoolInfo() public view returns ( PoolInfo memory _poolInfo ) {
 
         _poolInfo = PoolInfo({
             token1: token1,
@@ -272,10 +270,9 @@ contract MetalorianSwap is ERC20, Ownable {
     /**************************************************************/
     /*********************** SET FUNCTIONS ************************/
 
-    //// @dev to calculate how much pass to the new percetages
-    //// percentages precition is on 2 decimal representaion so multiply the
+    //// @dev to calculate how much pass to the new percentages
+    //// percentages precision is on 2 decimal representation so multiply the
     //// percentage by 100, EJ: 0,3 % == 30
-
     //// @notice set a new protocol fee
     //// @param _newProtocolFee new trade fee percentage
     function setProtocolFee( uint16 _newProtocolFee ) public onlyOwner returns ( bool ) {
@@ -316,28 +313,33 @@ contract MetalorianSwap is ERC20, Ownable {
     /*********************** POOL FUNCTIONS ***********************/
     
     //// @notice add new liquidity
-    //// @param _token1 amount of token 1
-    //// @param _token2 amount of token 2
-    function addLiquidity( uint _token1, uint _token2 ) public returns ( bool )  {
+    //// @dev amount1 and amount2 must have the same proportion in relation to reserves
+    //// @dev use this formula to calculate _amountToken1 and _amountToken2
+    //// x = totalToken1, y = totalToken2, dx = amount of token 1, dy = amount of token 2
+    //// dx = x * dy / y to prioritize amount of token 1
+    //// dy = y * dx / x to prioritize amount of token 2
+    //// @param _amountToken1 amount of token 1 to add at the pool
+    //// @param _amountToken2 amount of token 2 to add at the pool
+    function addLiquidity( uint _amountToken1, uint _amountToken2 ) public returns ( bool )  {
 
-        uint _shares = estimateShares( _token1, _token2 );
+        uint _shares = estimateShares( _amountToken1, _amountToken2 );
 
-        require(token1.transferFrom( msg.sender, address( this ), _handleDecimals(_token1, token1.decimals()) ));
+        require(token1.transferFrom( msg.sender, address( this ), _handleDecimals( _amountToken1, token1.decimals() ) ));
 
-        require(token2.transferFrom( msg.sender, address( this ), _handleDecimals(_token2, token2.decimals()) ));
+        require(token2.transferFrom( msg.sender, address( this ), _handleDecimals( _amountToken2, token2.decimals()) ));
 
         _mint( msg.sender, _shares );
 
-        _updateBalances( totalToken1 + _token1, totalToken2 + _token2 );
+        _updateBalances( totalToken1 + _amountToken1, totalToken2 + _amountToken2 );
 
-        emit NewLiquidity( msg.sender, _token1, _token2 );
+        emit NewLiquidity( msg.sender, _amountToken1, _amountToken2 );
 
         return true;
 
     }
 
     //// @notice remove liquidity
-    //// @param _shares amount of LP tokens 
+    //// @param _shares amount of LP tokens to withdraw
     function removeLiquidity( uint _shares ) public isActive checkShares( _shares ) returns ( bool ) {
 
         ( uint amount1, uint amount2 ) = estimateWithdrawAmounts( _shares );
