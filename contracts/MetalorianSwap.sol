@@ -156,6 +156,7 @@ contract MetalorianSwap is ERC20, Ownable {
     //// this to handle possible precision errors
     //// @param x amount 1
     //// @param y amount 2
+    // change name handleExactitude
     function _isEqual( uint x, uint y ) private pure returns( bool ) {
 
         if ( x == y) return true;
@@ -169,6 +170,7 @@ contract MetalorianSwap is ERC20, Ownable {
     //// @param _decimals the decimals representation to multiply 
     function _handleDecimals( uint _amount, uint8 _decimals ) private pure returns( uint ) {
 
+        
         if ( _decimals > 6 ) return _amount * 10 ** ( _decimals - 6 );
 
         else return _amount;
@@ -178,12 +180,13 @@ contract MetalorianSwap is ERC20, Ownable {
     //// @notice this returns the maximum tradable amount of the reserves
     //// @param _totalTokenOut the total reserves of the output token
     function maxTrade( uint _totalTokenOut ) public view returns ( uint maxTradeAmount ) {
-
+        
         maxTradeAmount = ( _totalTokenOut * maxTradePercentage ) / 10000;
 
     }
 
     //// @notice returns how much shares ( LP tokens ) send to user
+    //change add dev message
     //// @param _token1 amount of token 1
     //// @param _token2 amount of token 2
     function estimateShares( uint _token1, uint _token2 ) public view returns ( uint _shares ) {
@@ -225,17 +228,21 @@ contract MetalorianSwap is ERC20, Ownable {
     //// @notice returns the amount of the output token returned in an operation
     //// @param _amountIn amount of token input 
     //// @param _totalTokenIn total reserves of token input 
-    //// @param _totalTokenOut amount of token output
+    //change description = total reserves of token output
+    //// @param _totalTokenOut total reserves of token output
     function estimateSwap( uint _amountIn, uint _totalTokenIn, uint _totalTokenOut ) public view returns ( uint amountIn, uint amountOut, uint creatorFee ) {
 
         require( _amountIn > 0 && _totalTokenIn > 0 && _totalTokenOut > 0, "Swap Error: Input amount with 0 value not valid");
-
+        
+        //change variable name = amountInWithoutFee
         uint amountInWithFee = ( _amountIn * ( 10000 - ( tradeFee + protocolFee ) ) ) / 10000;
 
+        //change = confirmarlo con Julian
         creatorFee = ( _amountIn * protocolFee ) / 10000;
 
         amountIn = _amountIn - creatorFee ;
 
+        
         amountOut = ( _totalTokenOut * amountInWithFee ) / ( _totalTokenIn + amountInWithFee );
 
         require( amountOut <= maxTrade( _totalTokenOut ), "Swap Error: output value is greater than the limit");
