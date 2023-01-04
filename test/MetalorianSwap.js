@@ -110,15 +110,36 @@ describe("MetalorianSwap", function () {
 
 				const { metaSwap, USDT, USDC } = await loadFixture(deployMetalorianSwap)
 
+				// prove initial info
+
 				const currInfo = await metaSwap.getPoolInfo()
 
 				expect( currInfo.token1 ).to.be.equal( USDT.address )
 				expect( currInfo.token2 ).to.be.equal( USDC.address )
 				expect( currInfo.totalToken1 ).to.be.equal( 0 )
 				expect( currInfo.totalToken2 ).to.be.equal( 0 )
+				expect( currInfo.totalSupply ).to.be.equal( 0 )
 				expect( currInfo.tradeFee ).to.be.equal( 30 )
 				expect( currInfo.protocolFee ).to.be.equal( 5 )
 				expect( currInfo.maxTradePercentage ).to.be.equal( 1000 )
+
+				const amount1 = ethers.utils.parseUnits("1000", decimals )
+				const amount2 = ethers.utils.parseUnits("1000", decimals )
+
+				await metaSwap.addLiquidity( amount1, amount2 )
+
+				// prove before pool activity
+
+				const newInfo = await metaSwap.getPoolInfo()
+
+				expect( newInfo.token1 ).to.be.equal( USDT.address )
+				expect( newInfo.token2 ).to.be.equal( USDC.address )
+				expect( newInfo.totalToken1 ).to.be.equal( amount1 )
+				expect( newInfo.totalToken2 ).to.be.equal( amount2 )
+				expect( newInfo.totalSupply ).to.be.equal( amount1 )
+				expect( newInfo.tradeFee ).to.be.equal( 30 )
+				expect( newInfo.protocolFee ).to.be.equal( 5 )
+				expect( newInfo.maxTradePercentage ).to.be.equal( 1000 )
 
 			})
 

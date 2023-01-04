@@ -44,6 +44,7 @@ contract MetalorianSwap is ERC20, Ownable {
         IERC20Metadata token2;
         uint totalToken1;
         uint totalToken2;
+        uint totalSupply;
         uint16 tradeFee;
         uint16 protocolFee;
         uint16 maxTradePercentage;
@@ -253,6 +254,7 @@ contract MetalorianSwap is ERC20, Ownable {
             token2: token2,
             totalToken1: totalToken1,
             totalToken2: totalToken2,
+            totalSupply: totalSupply(),
             tradeFee: tradeFee,
             protocolFee: protocolFee,
             maxTradePercentage: maxTradePercentage
@@ -305,7 +307,7 @@ contract MetalorianSwap is ERC20, Ownable {
 
     /**************************************************************/
     /*********************** POOL FUNCTIONS ***********************/
-
+    
     //// @notice add new liquidity
     //// @param _token1 amount of token 1
     //// @param _token2 amount of token 2
@@ -329,7 +331,7 @@ contract MetalorianSwap is ERC20, Ownable {
 
     //// @notice remove liquidity
     //// @param _shares amount of LP tokens 
-    function removeLiquidity( uint _shares ) public isActive checkShares( _shares ) returns( bool ){
+    function removeLiquidity( uint _shares ) public isActive checkShares( _shares ) returns ( bool ) {
 
         ( uint amount1, uint amount2 ) = estimateWithdrawAmounts( _shares );
 
@@ -352,7 +354,7 @@ contract MetalorianSwap is ERC20, Ownable {
     //// @notice trade tokens
     //// @param _tokenIn the address of the input token 
     //// @param _amountIn the amount of input token
-    function swap( address _tokenIn, uint _amountIn ) public isActive returns( bool ) {
+    function swap( address _tokenIn, uint _amountIn ) public isActive returns ( bool ) {
 
         require( _tokenIn == address(token1) || _tokenIn == address(token2), "Trade Error: invalid token");
 
