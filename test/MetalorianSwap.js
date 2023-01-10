@@ -355,7 +355,7 @@ describe("MetalorianSwap", function () {
 
 				await expect(
 					metaSwap.estimateWithdrawAmounts( shares )
-				).to.be.revertedWith("Error: contract has no founds")
+				).to.be.revertedWith("Error: contract has no funds")
 
 			})
 
@@ -639,19 +639,19 @@ describe("MetalorianSwap", function () {
 
 	})
 
-	describe('removeLiquidity', () => {
+	describe('withdrawLiquidity', () => {
 
 		describe("- Errors", () => {
 
-			it("1. should fail if pool doesn't have founds", async () => {
+			it("1. should fail if pool doesn't have funds", async () => {
 
 				const { metaSwap } = await loadFixture( deployMetalorianSwap )
 
 				const amount = ethers.utils.parseUnits("120", decimals)
 
 				await expect(
-					metaSwap.removeLiquidity( amount )
-				).to.be.revertedWith("Error: contract has no founds")
+					metaSwap.withdrawLiquidity( amount )
+				).to.be.revertedWith("Error: contract has no funds")
 
 			})
 
@@ -665,7 +665,7 @@ describe("MetalorianSwap", function () {
 				await metaSwap.addLiquidity(amount1, amount2)
 
 				await expect(
-					metaSwap.removeLiquidity( 0 )
+					metaSwap.withdrawLiquidity( 0 )
 				).to.be.revertedWith("Error: Invalid Amount, value = 0")
 
 			})
@@ -680,7 +680,7 @@ describe("MetalorianSwap", function () {
 				await metaSwap.addLiquidity(amount1, amount2)
 
 				await expect(
-					metaSwap.connect(otherAccount).removeLiquidity( amount1 )
+					metaSwap.connect(otherAccount).withdrawLiquidity( amount1 )
 				).to.be.revertedWith("Error: Insufficient LP balance")
 
 			})
@@ -695,7 +695,7 @@ describe("MetalorianSwap", function () {
 				await metaSwap.addLiquidity(amount1, amount2)
 
 				await expect(
-					metaSwap.removeLiquidity( amount1.add( amount2 ) )
+					metaSwap.withdrawLiquidity( amount1.add( amount2 ) )
 				).to.be.revertedWith("Error: Insufficient LP balance")
 
 			})
@@ -722,7 +722,7 @@ describe("MetalorianSwap", function () {
 				expect( zbUSDT ).to.be.equal( 0 )
 				expect( zbUSDC ).to.be.equal( 0 )
 
-				await metaSwap.connect(otherAccount).removeLiquidity( amount1 )
+				await metaSwap.connect(otherAccount).withdrawLiquidity( amount1 )
 
 				const bUSDT = await USDT.balanceOf( otherAccount.address )
 				const bUSDC = await USDC.balanceOf( otherAccount.address )
@@ -750,7 +750,7 @@ describe("MetalorianSwap", function () {
 				expect( zbBUSD ).to.be.equal( 0 )
 				expect( zbUSDT ).to.be.equal( 0 )
 
-				await MS_BUSD_USDT.connect(otherAccount).removeLiquidity( amount1 )
+				await MS_BUSD_USDT.connect(otherAccount).withdrawLiquidity( amount1 )
 
 				const bUSDT = await USDT.balanceOf( otherAccount.address )
 				const bBUSD = await BUSD.balanceOf( otherAccount.address )
@@ -775,7 +775,7 @@ describe("MetalorianSwap", function () {
 				expect( sharesBefore ).to.be.equal( tSharesBefore )
 				expect( tSharesBefore ).to.be.equal( amount1 )
 
-				await metaSwap.removeLiquidity( amount1 )
+				await metaSwap.withdrawLiquidity( amount1 )
 
 				const sharesAfter = await metaSwap.balanceOf( owner.address )
 				const tSharesAfter = await metaSwap.totalSupply()
@@ -805,7 +805,7 @@ describe("MetalorianSwap", function () {
 				expect( totalT2Before ).to.be.equal( balanceT2Before )
 				// expect( kBefore ).to.be.equal( balanceT1Before.mul(balanceT2Before))
 
-				await metaSwap.removeLiquidity( amount1 )
+				await metaSwap.withdrawLiquidity( amount1 )
 
 				const totalT1After = await metaSwap.totalToken1()
 				const totalT2After = await metaSwap.totalToken2()
@@ -899,7 +899,7 @@ describe("MetalorianSwap", function () {
 
 		describe("- Errors", () => {
 
-			it("1. should fail if pool has no founds", async () => {
+			it("1. should fail if pool has no funds", async () => {
 
 				const { metaSwap, USDT } = await loadFixture( deployMetalorianSwap )
 
@@ -907,7 +907,7 @@ describe("MetalorianSwap", function () {
 
 				await expect( 
 					metaSwap.swap( USDT.address, amount )
-				).to.be.revertedWith("Error: contract has no founds")
+				).to.be.revertedWith("Error: contract has no funds")
 
 			})
 
@@ -1280,11 +1280,11 @@ describe("MetalorianSwap", function () {
 
 				await expect(
 					metaSwap.addLiquidity( amount1, amount2)
-				).to.emit( metaSwap, "NewLiquidity" ).withArgs( owner.address, amount1, amount2 )
+				).to.emit( metaSwap, "NewLiquidity" ).withArgs( owner.address, amount1, amount2, amount1, amount1 )
 				
 			})
 
-			it("2. LiquidityWithdraw", async () => {
+			it("2. LiquidityWithdrawal", async () => {
 				
 				const { metaSwap, owner } = await  loadFixture( deployMetalorianSwap )
 
@@ -1294,8 +1294,8 @@ describe("MetalorianSwap", function () {
 				await metaSwap.addLiquidity( amount1, amount2)
 
 				await expect(
-					metaSwap.removeLiquidity( amount1 )
-				).to.emit( metaSwap, "LiquidityWithdraw" ).withArgs( owner.address, amount1, amount2 )
+					metaSwap.withdrawLiquidity( amount1 )
+				).to.emit( metaSwap, "LiquidityWithdrawal" ).withArgs( owner.address, amount1, amount2, amount1, 0 )
 			
 			})
 

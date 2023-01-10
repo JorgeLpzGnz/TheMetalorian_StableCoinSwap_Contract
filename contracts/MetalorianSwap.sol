@@ -3,9 +3,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "hardhat/console.sol";
 
 /// @title MetalorianSwap a USD stablecoin Pool
 /// @notice A Liquidity protocol based in the CPAMM ( Constant product Automated Market Maker ) 
@@ -18,27 +16,23 @@ contract MetalorianSwap is ERC20, Ownable {
 
     IERC20Metadata public immutable token2; 
 
-    //// @notice the total reserves of the token 1
+    /// @notice the total reserves of the token 1
     uint public totalToken1;
 
-    //// @notice the total reserves of the token 2
+    /// @notice the total reserves of the token 2
     uint public totalToken2;
 
-    //// @dev Constant product not required in this CPAMM model
-    //// @notice const product
-    // uint public k;
-
-    //// @notice fee charge per trade designated to LP
+    /// @notice fee charge per trade designated to LP
     uint16 public tradeFee = 30;
 
-    //// @notice fee charge per trade designated to protocol creator
-    uint16 public protocolFee = 5;
+    /// @notice fee charge per trade designated to protocol creator
+    uint16 public protocolFee = 20;
 
-    //// @notice the maximum tradable percentage of the reserves
-    //// @dev that maximum will be this settable percentage of the respective token reserves
+    /// @notice the maximum tradable percentage of the reserves
+    /// @dev that maximum will be this settable percentage of the respective token reserves
     uint16 public maxTradePercentage = 1000;
 
-    //// @notice all the pool info ( used in getPoolInfo )
+    /// @notice all the pool info ( used in getPoolInfo )
     struct PoolInfo {
         IERC20Metadata token1;
         IERC20Metadata token2;
@@ -53,36 +47,41 @@ contract MetalorianSwap is ERC20, Ownable {
     /**************************************************************/
     /*************************** EVENTS ***************************/
 
-    //// @param owner contract owner address
-    //// @param newProtocolFee new creator fee
+    /// @param owner contract owner address
+    /// @param newProtocolFee new creator fee
     event NewProtocolFee( address owner, uint16 newProtocolFee );
 
-    //// @param owner contract owner address
-    //// @param newTradeFee new fee cost per trade
+    /// @param owner contract owner address
+    /// @param newTradeFee new fee cost per trade
     event NewTradeFee( address owner, uint16 newTradeFee );
 
-    //// @param owner contract owner address
-    //// @param newTradePercentage new maximum tradable percentage of the reserves
+    /// @param owner contract owner address
+    /// @param newTradePercentage new maximum tradable percentage of the reserves
     event NewMaxTradePercentage( address owner, uint16 newTradePercentage );
     
-    //// @param liquidityProvider user deposit address
-    //// @param amountToken1 amount of the first token
-    //// @param amountToken2 amount of the second token
-    event NewLiquidity( address liquidityProvider, uint amountToken1, uint amountToken2 );
+    /// @param user user deposit address
+    /// @param amountToken1 deposited amount of the first token
+    /// @param amountToken2 deposited amount of the second token
+    /// @param shares amount of LP tokens minted
+    /// @param totalSupply new LP tokens total supply
+    event NewLiquidity( address user, uint amountToken1, uint amountToken2, uint shares, uint totalSupply );
 
-    //// @param liquidityProvider user withdraw address
-    //// @param amountToken1 amount provided of the first token
-    //// @param amountToken2 amount provided of the second token
-    event LiquidityWithdraw( address liquidityProvider, uint amountToken1, uint amountToken2 );
+    /// @param user user withdraw address
+    /// @param amountToken1 amount withdrawn of the first token
+    /// @param amountToken2 amount withdrawn of the second token
+    /// @param shares amount of LP tokens burned
+    /// @param totalSupply new LP tokens total supply
+    event LiquidityWithdrawal( address user, uint amountToken1, uint amountToken2, uint shares, uint totalSupply );
 
-    //// @param user user trade address
-    //// @param amountIn incoming amount 
-    //// @param amountOut output amount
-    event Swap( address user, uint amountIn, uint amountOut);
+    /// @param user user trade address
+    /// @param protocolFee incoming amount 
+    /// @param amountIn incoming amount 
+    /// @param amountOut output amount
+    event Swap( address user, uint protocolFee, uint amountIn, uint amountOut);
 
-    //// @param _token1Address address of the first stablecoin 
-    //// @param _token2Address address of the second stablecoin 
-    //// @param _name the name and symbol of the LP tokens
+    /// @param _token1Address address of the first stablecoin 
+    /// @param _token2Address address of the second stablecoin 
+    /// @param _name the name and symbol of the LP token
     constructor (address _token1Address, address _token2Address, string memory _name) ERC20( _name, _name ) {
 
         token1 = IERC20Metadata( _token1Address );
@@ -94,17 +93,17 @@ contract MetalorianSwap is ERC20, Ownable {
     /**************************************************************/
     /************************** MODIFIERS *************************/
 
-    //// @notice it checks if the pool have founds 
+    /// @notice it checks if the pool have funds 
     modifier isActive {
 
-        require( totalSupply() > 0, "Error: contract has no founds");
+        require( totalSupply() > 0, "Error: contract has no funds");
 
         _;
 
     }
 
-    //// @notice it checks the user has the sufficient balance
-    //// @param _amount the amount to check
+    /// @notice it checks the user has the sufficient balance
+    /// @param _amount the amount to check
     modifier checkShares( uint _amount) {
 
         require( _amount > 0, "Error: Invalid Amount, value = 0");
@@ -118,45 +117,43 @@ contract MetalorianSwap is ERC20, Ownable {
     /**************************************************************/
     /**************************** UTILS ***************************/
 
-    //// @notice decimals representation
+    /// @notice decimals representation
     function decimals() public pure override returns( uint8 ) {
 
         return 6;
         
     }
 
-    //// @notice this return the minimum between the passed numbers
+    /// @notice this returns the minimum between the given numbers
     function _min( uint x, uint y ) private pure returns( uint ) {
 
         return x <= y ? x : y;
 
     }
 
-    //// @notice it return the maximum between the past numbers
+    /// @notice this returns the maximum between the given numbers
     function _max( uint x, uint y ) private pure returns( uint ) {
 
         return x >= y ? x : y;
 
     }
 
-    //// @notice it updates the current reserves
-    //// @param _amountToken1 the new total reserves of token 1
-    //// @param _amountToken2 the new total reserves of token 2
+    /// @notice it updates the current reserves
+    /// @param _amountToken1 the new total reserves of token 1
+    /// @param _amountToken2 the new total reserves of token 2
     function _updateBalances( uint _amountToken1, uint _amountToken2) private {
 
         totalToken1 = _amountToken1;
 
         totalToken2 = _amountToken2;
 
-        // k = _amountToken1 * _amountToken2;
-
     }
 
-    //// @notice this verify if two numbers are equal
-    //// @dev if they are not equal, take the minimum + 1 to check if it is equal to the largest
-    //// this to handle possible precision errors
-    //// @param x amount 1
-    //// @param y amount 2
+    /// @notice this verify if two numbers are equal
+    /// @dev if they are not equal, take the minimum + 1 to check if it is equal to the largest
+    /// this to handle possible precision errors
+    /// @param x amount 1
+    /// @param y amount 2
     function _isEqual( uint x, uint y ) private pure returns ( bool ) {
 
         if ( x == y) return true;
@@ -165,9 +162,9 @@ contract MetalorianSwap is ERC20, Ownable {
 
     }
 
-    //// @notice it multiply the amount by the respective ERC20 decimal representation
-    //// @param _amount the amount to multiply
-    //// @param _decimals the decimals representation to multiply 
+    /// @notice it multiply the amount by the respective ERC20 decimal representation
+    /// @param _amount the amount to multiply
+    /// @param _decimals the decimals representation to multiply 
     function _handleDecimals( uint _amount, uint8 _decimals ) private pure returns ( uint ) {
         
         if ( _decimals > 6 ) return _amount * 10 ** ( _decimals - 6 );
@@ -176,22 +173,25 @@ contract MetalorianSwap is ERC20, Ownable {
         
     }
 
-    //// @notice this returns the maximum tradable amount of the reserves
-    //// @param _totalTokenOut the total reserves of the output token
+    /// @notice this returns the maximum tradable amount of the reserves
+    /// @param _totalTokenOut the total reserves of the output token
     function maxTrade( uint _totalTokenOut ) public view returns ( uint maxTradeAmount ) {
         
         maxTradeAmount = ( _totalTokenOut * maxTradePercentage ) / 10000;
 
     }
 
-    //// @notice returns how much shares ( LP tokens ) send to user
-    //// @dev amount1 and amount2 must have the same proportion in relation to reserves
-    //// @dev use this formula to calculate _amountToken1 and _amountToken2
-    //// x = totalToken1, y = totalToken2, dx = amount of token 1, dy = amount of token 2
-    //// dx = x * dy / y to prioritize amount of token 1
-    //// dy = y * dx / x to prioritize amount of token 2
-    //// @param _amountToken1 amount of token 1 to add at the pool
-    //// @param _amountToken2 amount of token 2 to add at the pool
+    /**************************************************************/
+    /******************** ESTIMATION FUNCTIONS ********************/
+
+    /// @notice returns how much shares ( LP tokens ) send to user
+    /// @dev amount1 and amount2 must have the same proportion in relation to reserves
+    /// @dev use this formula to calculate _amountToken1 and _amountToken2
+    /// x = totalToken1, y = totalToken2, dx = amount of token 1, dy = amount of token 2
+    /// dx = x * dy / y to prioritize amount of token 1
+    /// dy = y * dx / x to prioritize amount of token 2
+    /// @param _amountToken1 amount of token 1 to add at the pool
+    /// @param _amountToken2 amount of token 2 to add at the pool
     function estimateShares( uint _amountToken1, uint _amountToken2 ) public view returns ( uint _shares ) {
 
         if( totalSupply() == 0 ) {
@@ -216,8 +216,8 @@ contract MetalorianSwap is ERC20, Ownable {
         
     }
 
-    //// @notice returns the number of token 1 and token 2 that is sent depending on the number of LP tokens passed as parameters (actions)
-    //// @param _shares amount of LP tokens
+    /// @notice returns the number of token 1 and token 2 that is send depending on the number of LP tokens given as parameters ( shares )
+    /// @param _shares amount of LP tokens to estimate withdrawal
     function estimateWithdrawAmounts( uint _shares ) public view isActive returns( uint amount1, uint amount2 ) {
 
         require ( _shares <= totalSupply(), "Error: insufficient pool balance");
@@ -228,10 +228,10 @@ contract MetalorianSwap is ERC20, Ownable {
 
     }
 
-    //// @notice returns the amount of the output token returned in an operation
-    //// @param _amountIn amount of token input 
-    //// @param _totalTokenIn total reserves of token input 
-    //// @param _totalTokenOut total reserves of token output
+    /// @notice returns the amount of exit token to send in a trade
+    /// @param _amountIn amount of token input 
+    /// @param _totalTokenIn total reserves of token input 
+    /// @param _totalTokenOut total reserves of token output
     function estimateSwap( uint _amountIn, uint _totalTokenIn, uint _totalTokenOut ) public view returns ( uint amountIn, uint amountOut, uint creatorFee ) {
 
         require( _amountIn > 0 && _totalTokenIn > 0 && _totalTokenOut > 0, "Swap Error: Input amount with 0 value not valid");
@@ -251,7 +251,7 @@ contract MetalorianSwap is ERC20, Ownable {
     /**************************************************************/
     /*********************** VIEW FUNCTIONS ***********************/
 
-    //// @notice it returns the current pool info
+    /// @notice it returns the current pool info
     function getPoolInfo() public view returns ( PoolInfo memory _poolInfo ) {
 
         _poolInfo = PoolInfo({
@@ -270,11 +270,11 @@ contract MetalorianSwap is ERC20, Ownable {
     /**************************************************************/
     /*********************** SET FUNCTIONS ************************/
 
-    //// @dev to calculate how much pass to the new percentages
-    //// percentages precision is on 2 decimal representation so multiply the
-    //// percentage by 100, EJ: 0,3 % == 30
-    //// @notice set a new protocol fee
-    //// @param _newProtocolFee new trade fee percentage
+    /// @dev to calculate how much pass to the new percentages
+    /// percentages precision is on 2 decimal representation so multiply the
+    /// percentage by 100, EJ: 0,3 % == 30
+    /// @notice set a new protocol fee
+    /// @param _newProtocolFee new trade fee percentage
     function setProtocolFee( uint16 _newProtocolFee ) public onlyOwner returns ( bool ) {
 
         protocolFee = _newProtocolFee;
@@ -285,8 +285,8 @@ contract MetalorianSwap is ERC20, Ownable {
 
     }
 
-    //// @notice set a new trade fee
-    //// @param _newTradeFee new trade fee percentage
+    /// @notice set a new trade fee
+    /// @param _newTradeFee new trade fee percentage
     function setTradeFee( uint16 _newTradeFee ) public onlyOwner returns ( bool ) {
 
         tradeFee = _newTradeFee;
@@ -297,8 +297,8 @@ contract MetalorianSwap is ERC20, Ownable {
 
     }
 
-    //// @notice set a new maximum tradable percentage
-    //// @param _newTradeFee new trade fee percentage
+    /// @notice set a new maximum tradable percentage
+    /// @param _newTradePercentage new trade fee percentage
     function setMaxTradePercentage( uint16 _newTradePercentage ) public onlyOwner returns ( bool ) {
 
         maxTradePercentage = _newTradePercentage;
@@ -312,14 +312,15 @@ contract MetalorianSwap is ERC20, Ownable {
     /**************************************************************/
     /*********************** POOL FUNCTIONS ***********************/
     
-    //// @notice add new liquidity
-    //// @dev amount1 and amount2 must have the same proportion in relation to reserves
-    //// @dev use this formula to calculate _amountToken1 and _amountToken2
-    //// x = totalToken1, y = totalToken2, dx = amount of token 1, dy = amount of token 2
-    //// dx = x * dy / y to prioritize amount of token 1
-    //// dy = y * dx / x to prioritize amount of token 2
-    //// @param _amountToken1 amount of token 1 to add at the pool
-    //// @param _amountToken2 amount of token 2 to add at the pool
+    /// @notice add new liquidity
+    /// @dev amount1 and amount2 must have the same proportion in relation to reserves
+    /// @dev use this formula to calculate _amountToken1 and _amountToken2
+    /// x = totalToken1, y = totalToken2, dx = amount of token 1, dy = amount of token 2
+    /// dx = x * dy / y to prioritize amount of token 1
+    /// dy = y * dx / x to prioritize amount of token 2
+    /// @param _amountToken1 amount of token 1 to add at the pool
+    /// @param _amountToken2 amount of token 2 to add at the pool
+    /// @return bool returns true on success transaction
     function addLiquidity( uint _amountToken1, uint _amountToken2 ) public returns ( bool )  {
 
         uint _shares = estimateShares( _amountToken1, _amountToken2 );
@@ -332,15 +333,16 @@ contract MetalorianSwap is ERC20, Ownable {
 
         _updateBalances( totalToken1 + _amountToken1, totalToken2 + _amountToken2 );
 
-        emit NewLiquidity( msg.sender, _amountToken1, _amountToken2 );
+        emit NewLiquidity( msg.sender, _amountToken1, _amountToken2, _shares, totalSupply() );
 
         return true;
 
     }
 
-    //// @notice remove liquidity
-    //// @param _shares amount of LP tokens to withdraw
-    function removeLiquidity( uint _shares ) public isActive checkShares( _shares ) returns ( bool ) {
+    /// @notice withdraw liquidity
+    /// @param _shares amount of LP tokens to withdrawal
+    /// @return bool returns true on success transaction
+    function withdrawLiquidity( uint _shares ) public isActive checkShares( _shares ) returns ( bool ) {
 
         ( uint amount1, uint amount2 ) = estimateWithdrawAmounts( _shares );
 
@@ -354,15 +356,16 @@ contract MetalorianSwap is ERC20, Ownable {
 
         _updateBalances( totalToken1 - amount1, totalToken2 - amount2 );
 
-        emit LiquidityWithdraw( msg.sender, amount1, amount2 );
+        emit LiquidityWithdrawal( msg.sender, amount1, amount2, _shares, totalSupply() );
 
         return true;
 
     }
 
-    //// @notice trade tokens
-    //// @param _tokenIn the address of the input token 
-    //// @param _amountIn the amount of input token
+    /// @notice trade tokens
+    /// @param _tokenIn address of the input token 
+    /// @param _amountIn amount of input token
+    /// @return bool returns true on success transaction
     function swap( address _tokenIn, uint _amountIn ) public isActive returns ( bool ) {
 
         require( _tokenIn == address(token1) || _tokenIn == address(token2), "Trade Error: invalid token");
@@ -385,7 +388,7 @@ contract MetalorianSwap is ERC20, Ownable {
 
         else _updateBalances( totalToken1 - amountOut, totalToken2 + amountIn );
 
-        emit Swap( msg.sender, _amountIn ,amountOut);
+        emit Swap( msg.sender, creatorFee, amountIn ,amountOut);
 
         return true;
 

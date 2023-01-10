@@ -82,7 +82,7 @@ async function removeRandomLiquidity( metaSwap ) {
 		
 		await metaSwap
 		    .connect(signers[i])
-			.removeLiquidity( shares.div( 2 ) )
+			.withdrawLiquidity( shares.div( 2 ) )
 		
 	}
 	
