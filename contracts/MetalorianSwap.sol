@@ -218,7 +218,7 @@ contract MetalorianSwap is ERC20, Ownable {
 
     /// @notice returns the number of token 1 and token 2 that is send depending on the number of LP tokens given as parameters ( shares )
     /// @param _shares amount of LP tokens to estimate withdrawal
-    function estimateWithdrawAmounts( uint _shares ) public view isActive returns( uint amount1, uint amount2 ) {
+    function estimateWithdrawalAmounts( uint _shares ) public view isActive returns( uint amount1, uint amount2 ) {
 
         require ( _shares <= totalSupply(), "Error: insufficient pool balance");
 
@@ -344,7 +344,7 @@ contract MetalorianSwap is ERC20, Ownable {
     /// @return bool returns true on success transaction
     function withdrawLiquidity( uint _shares ) public isActive checkShares( _shares ) returns ( bool ) {
 
-        ( uint amount1, uint amount2 ) = estimateWithdrawAmounts( _shares );
+        ( uint amount1, uint amount2 ) = estimateWithdrawalAmounts( _shares );
 
         require( amount1 > 0 && amount2 > 0, "Withdraw Error: amounts with zero value");
 

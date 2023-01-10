@@ -343,7 +343,7 @@ describe("MetalorianSwap", function () {
 
 	})
 
-	describe('estimateWithdrawAmounts', () => {
+	describe('estimateWithdrawalAmounts', () => {
 
 		describe("- Errors", () => {
 
@@ -354,7 +354,7 @@ describe("MetalorianSwap", function () {
 				const shares = ethers.utils.parseUnits("120", decimals)
 
 				await expect(
-					metaSwap.estimateWithdrawAmounts( shares )
+					metaSwap.estimateWithdrawalAmounts( shares )
 				).to.be.revertedWith("Error: contract has no funds")
 
 			})
@@ -368,7 +368,7 @@ describe("MetalorianSwap", function () {
 				await metaSwap.addLiquidity(amount1, amount2)
 
 				await expect(
-					metaSwap.estimateWithdrawAmounts(amount1.add(100))
+					metaSwap.estimateWithdrawalAmounts(amount1.add(100))
 				).to.be.revertedWith("Error: insufficient pool balance")
 
 			})
@@ -393,7 +393,7 @@ describe("MetalorianSwap", function () {
 
 				await metaSwap.addLiquidity(amount1Owner, amount2Owner)
 
-				const [ amount1OutO, amount2OutO ] = await metaSwap.estimateWithdrawAmounts( amount1Owner )
+				const [ amount1OutO, amount2OutO ] = await metaSwap.estimateWithdrawalAmounts( amount1Owner )
 
 				// the amounts of the owner must be equal in inactivity pool
 
@@ -407,7 +407,7 @@ describe("MetalorianSwap", function () {
 
 				await metaSwap.connect( otherAccount ).addLiquidity(amount1OtherAccount, amount2OtherAccount)
 				
-				const [ amount1OutOA, amount2OutOA ] = await metaSwap.connect( otherAccount ).estimateWithdrawAmounts( amount1OtherAccount )
+				const [ amount1OutOA, amount2OutOA ] = await metaSwap.connect( otherAccount ).estimateWithdrawalAmounts( amount1OtherAccount )
 
 				expect( amount1OutOA ).to.be.equal( amount1OtherAccount )
 				expect( amount2OutOA ).to.be.equal( amount2OtherAccount )
@@ -424,7 +424,7 @@ describe("MetalorianSwap", function () {
 
 				await addRandomLiquidity( metaSwap, USDT, USDC )
 
-				const [ amount1OutOAfter, amount2OutOAfter ] = await metaSwap.estimateWithdrawAmounts( amount1Owner )
+				const [ amount1OutOAfter, amount2OutOAfter ] = await metaSwap.estimateWithdrawalAmounts( amount1Owner )
 
 				// estimated value must be greater or equal to initial in an active pool
 
@@ -873,9 +873,9 @@ describe("MetalorianSwap", function () {
 
 				// withdraw amounts
 
-				const [ withdraw1, withdraw2 ] = await metaSwap.estimateWithdrawAmounts( balanceOwner )
+				const [ withdraw1, withdraw2 ] = await metaSwap.estimateWithdrawalAmounts( balanceOwner )
 
-				const [ withdraw1AO, withdraw2AO ] = await metaSwap.connect( otherAccount ).estimateWithdrawAmounts( balanceOA )
+				const [ withdraw1AO, withdraw2AO ] = await metaSwap.connect( otherAccount ).estimateWithdrawalAmounts( balanceOA )
 
 				// initial investor must have more than initial amount
 
