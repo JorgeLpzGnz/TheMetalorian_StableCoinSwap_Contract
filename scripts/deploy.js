@@ -12,27 +12,31 @@ async function main() {
   const testBUSD = "0x48D153249EE2B08E6bB89cfE3923053d3130ba78"
   const testDAI = "0xD7961411DD94Cf52d6d32DB3600a8D08c57495D8"
 
-  const MS_USDT_USDC_F = await ethers.getContractFactory("MetalorianSwap");
-  const MS_USDT_USDC = await MS_USDT_USDC_F.deploy( testUSDT, testUSDC, "USDTUSDC_LP" );
+  const MetalorianSwap = await ethers.getContractFactory("MetalorianSwap");
+
+  // const MS_USDT_USDC_F = await ethers.getContractFactory("MetalorianSwap");
+  const MS_USDT_USDC = await MetalorianSwap.deploy( testUSDT, testUSDC, "USDTUSDC_LP" );
   await MS_USDT_USDC.deployed();
 
-  const MS_USDC_BUSD_F = await ethers.getContractFactory("MetalorianSwap");
-  const MS_USDC_BUSD = await MS_USDC_BUSD_F.deploy( testUSDC, testBUSD, "USDCBUSD_LP" );
+  console.log( `POOL USDT / USDC DEPLOYED, ADDRESS: ${MS_USDT_USDC.address}`);
+
+  // const MS_USDC_BUSD_F = await ethers.getContractFactory("MetalorianSwap");
+  const MS_USDC_BUSD = await MetalorianSwap.deploy( testUSDC, testBUSD, "USDCBUSD_LP" );
   await MS_USDC_BUSD.deployed();
 
-  const MS_BUSD_USDT_F = await ethers.getContractFactory("MetalorianSwap");
-  const MS_BUSD_USDT = await MS_BUSD_USDT_F.deploy( testBUSD, testUSDT, "BUSDUSDT_LP" );
+  console.log( `POOL USDC / BUSD DEPLOYED, ADDRESS: ${MS_USDC_BUSD.address}`);
+
+  // const MS_BUSD_USDT_F = await ethers.getContractFactory("MetalorianSwap");
+  const MS_BUSD_USDT = await MetalorianSwap.deploy( testBUSD, testUSDT, "BUSDUSDT_LP" );
   await MS_BUSD_USDT.deployed();
 
-  const MS_USDT_DAI_F = await ethers.getContractFactory("MetalorianSwap");
-  const MS_USDT_DAI = await MS_USDT_DAI_F.deploy( testUSDT, testDAI, "USDTDAI_LP" );
+  console.log( `POOL BUSD / USDT DEPLOYED, ADDRESS: ${MS_BUSD_USDT.address}`);
+
+  // const MS_USDT_DAI_F = await ethers.getContractFactory("MetalorianSwap");
+  const MS_USDT_DAI = await MetalorianSwap.deploy( testUSDT, testDAI, "USDTDAI_LP" );
   await MS_USDT_DAI.deployed();
 
-  console.log( `
-  MetalorianSwap USDT / USDC ${MS_USDT_USDC.address}
-  MetalorianSwap USDC / BUSD ${MS_USDC_BUSD.address}
-  MetalorianSwap BUSD / USDT ${MS_BUSD_USDT.address}
-  MetalorianSwap USDT / DAI ${MS_USDT_DAI.address}`);
+  console.log( `POOL USDT / DAI DEPLOYED, ADDRESS: ${MS_USDT_DAI.address}`);
   
 }
 
