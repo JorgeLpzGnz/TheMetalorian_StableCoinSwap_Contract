@@ -120,7 +120,7 @@ describe("MetalorianSwap", function () {
 				expect( currInfo.totalToken2 ).to.be.equal( 0 )
 				expect( currInfo.totalSupply ).to.be.equal( 0 )
 				expect( currInfo.tradeFee ).to.be.equal( 30 )
-				expect( currInfo.protocolFee ).to.be.equal( 5 )
+				expect( currInfo.protocolFee ).to.be.equal( 20 )
 				expect( currInfo.maxTradePercentage ).to.be.equal( 1000 )
 
 				const amount1 = ethers.utils.parseUnits("1000", decimals )
@@ -138,7 +138,7 @@ describe("MetalorianSwap", function () {
 				expect( newInfo.totalToken2 ).to.be.equal( amount2 )
 				expect( newInfo.totalSupply ).to.be.equal( amount1 )
 				expect( newInfo.tradeFee ).to.be.equal( 30 )
-				expect( newInfo.protocolFee ).to.be.equal( 5 )
+				expect( newInfo.protocolFee ).to.be.equal( 20 )
 				expect( newInfo.maxTradePercentage ).to.be.equal( 1000 )
 
 			})
@@ -171,7 +171,7 @@ describe("MetalorianSwap", function () {
 
 				const initialProtocolFee = await metaSwap.protocolFee()
 
-				expect( initialProtocolFee ).to.be.equal( 5 )
+				expect( initialProtocolFee ).to.be.equal( 20 )
 
 				await metaSwap.setProtocolFee( 10 )
 
@@ -1316,9 +1316,11 @@ describe("MetalorianSwap", function () {
 					amount.mul( 10000 - ( protocolFee + tradeFee )).div( 10000 )) 
 				)
 
+				const creatorFee = amount.mul( protocolFee ).div( 10000 )
+
 				await expect(
 					metaSwap.swap( USDT.address, amount )
-				).to.emit( metaSwap, "Swap" ).withArgs( owner.address, amount, amountOut )
+				).to.emit( metaSwap, "Swap" ).withArgs( owner.address, creatorFee, amount.sub( creatorFee ), amountOut )
 
 			})
 
