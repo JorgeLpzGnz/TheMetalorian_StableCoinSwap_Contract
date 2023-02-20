@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @title MetalorianSwap a USD stablecoin Pool
+/// @author JorgeLpzGnz & CarlosMario714
 /// @notice A Liquidity protocol based in the CPAMM ( Constant product Automated Market Maker ) 
 contract MetalorianSwap is ERC20, Ownable {
 
