@@ -33,6 +33,9 @@ contract MetalorianSwap is ERC20, Ownable {
     /// @dev that maximum will be this settable percentage of the respective token reserves
     uint16 public maxTradePercentage = 1000;
 
+    /// @notice Fees recipient
+    address public feeRecipient;
+
     /// @notice all the pool info ( used in getPoolInfo )
     struct PoolInfo {
         IERC20Metadata token1;
@@ -59,35 +62,41 @@ contract MetalorianSwap is ERC20, Ownable {
     /// @param owner contract owner address
     /// @param newTradePercentage new maximum tradable percentage of the reserves
     event NewMaxTradePercentage( address owner, uint16 newTradePercentage );
+
+    /// @param newRecipient address of the new recipient
+    event NewFeeRecipient( address indexed newRecipient );
     
     /// @param user user deposit address
     /// @param amountToken1 deposited amount of the first token
     /// @param amountToken2 deposited amount of the second token
     /// @param shares amount of LP tokens minted
     /// @param totalSupply new LP tokens total supply
-    event NewLiquidity( address user, uint amountToken1, uint amountToken2, uint shares, uint totalSupply );
+    event NewLiquidity( address indexed user, uint amountToken1, uint amountToken2, uint shares, uint totalSupply );
 
     /// @param user user withdraw address
     /// @param amountToken1 amount withdrawn of the first token
     /// @param amountToken2 amount withdrawn of the second token
     /// @param shares amount of LP tokens burned
     /// @param totalSupply new LP tokens total supply
-    event LiquidityWithdrawal( address user, uint amountToken1, uint amountToken2, uint shares, uint totalSupply );
+    event LiquidityWithdrawal( address indexed user, uint amountToken1, uint amountToken2, uint shares, uint totalSupply );
 
     /// @param user user trade address
     /// @param protocolFee incoming amount 
     /// @param amountIn incoming amount 
     /// @param amountOut output amount
-    event Swap( address user, uint protocolFee, uint amountIn, uint amountOut);
+    event Swap( address indexed user, uint protocolFee, uint amountIn, uint amountOut);
+
 
     /// @param _token1Address address of the first stablecoin 
     /// @param _token2Address address of the second stablecoin 
     /// @param _name the name and symbol of the LP token
-    constructor (address _token1Address, address _token2Address, string memory _name) ERC20( _name, _name ) {
+    constructor (address _token1Address, address _token2Address, string memory _name, address _feeRecipient) ERC20( _name, _name ) {
 
         token1 = IERC20Metadata( _token1Address );
 
         token2 = IERC20Metadata( _token2Address );
+
+        feeRecipient = _feeRecipient;
 
     }
 
@@ -310,6 +319,20 @@ contract MetalorianSwap is ERC20, Ownable {
 
     }
 
+    /// @notice set a new fee recipient
+    /// @param _newRecipient address of the new recipient
+    function setFeeRecipient( address _newRecipient ) public onlyOwner returns( bool ) {
+
+        require( feeRecipient != _newRecipient, "New Recipient can be the same than current");
+
+        feeRecipient = _newRecipient;
+
+        emit NewFeeRecipient( _newRecipient );
+
+        return true;
+
+    }
+
     /**************************************************************/
     /*********************** POOL FUNCTIONS ***********************/
     
@@ -379,7 +402,7 @@ contract MetalorianSwap is ERC20, Ownable {
 
         ( uint amountIn, uint amountOut, uint creatorFee ) = estimateSwap( _amountIn, _totalTokenIn, _totalTokenOut );
         
-        require( tokenIn.transferFrom( msg.sender, owner(), _handleDecimals( creatorFee, tokenIn.decimals() ) ));
+        require( tokenIn.transferFrom( msg.sender, feeRecipient, _handleDecimals( creatorFee, tokenIn.decimals() ) ));
 
         require( tokenIn.transferFrom( msg.sender, address( this ), _handleDecimals( amountIn, tokenIn.decimals() ) ));
 

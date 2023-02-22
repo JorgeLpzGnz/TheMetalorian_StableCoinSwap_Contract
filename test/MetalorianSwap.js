@@ -55,10 +55,10 @@ describe("MetalorianSwap", function () {
 		)
 
 		const MetalorianSwap = await ethers.getContractFactory("MetalorianSwap");
-		const metaSwap = await MetalorianSwap.deploy( USDT.address, USDC.address, "USDT_USDC_LP" );
+		const metaSwap = await MetalorianSwap.deploy( USDT.address, USDC.address, "USDT_USDC_LP", owner.address );
 
 		const MS_BUSD_USDT_F = await ethers.getContractFactory("MetalorianSwap");
-		const MS_BUSD_USDT = await MS_BUSD_USDT_F.deploy(  BUSD.address, USDT.address, "BUSD_USDT_LP" );
+		const MS_BUSD_USDT = await MS_BUSD_USDT_F.deploy(  BUSD.address, USDT.address, "BUSD_USDT_LP", owner.address );
 
 		const USDTSupply = await USDT.totalSupply()
 		const USDCSupply = await USDC.totalSupply()
@@ -216,6 +216,52 @@ describe("MetalorianSwap", function () {
 				const newFee = await metaSwap.tradeFee()
 
 				expect( newFee ).to.be.equal( 25 )
+
+			})
+
+		})
+
+	})
+
+	describe('setFeeRecipient', () => {
+
+		describe("- Errors", () => {
+
+			it("1. Should fail if not owner want to change", async () => {
+
+				const { metaSwap, otherAccount } = await loadFixture(deployMetalorianSwap)
+
+				await expect(
+					metaSwap.connect( otherAccount ).setFeeRecipient( otherAccount.address )
+				).to.be.reverted
+
+			})
+
+			it("1. Should fail if try to set the same than current", async () => {
+
+				const { metaSwap, owner } = await loadFixture(deployMetalorianSwap)
+
+				await expect(
+					metaSwap.setFeeRecipient( owner.address )
+				).to.be.revertedWith("New Recipient can be the same than current")
+
+			})
+
+		})
+
+		describe("- functionalities", () => {
+
+			it("1. Should set the new trade fee", async () => {
+
+				const { metaSwap, owner, otherAccount } = await loadFixture(deployMetalorianSwap)
+
+				const currentRecipient = await metaSwap.feeRecipient()
+
+				expect( currentRecipient ).to.be.equal( owner.address )
+
+				await metaSwap.setFeeRecipient( otherAccount.address )
+
+				expect( await metaSwap.feeRecipient() ).to.be.equal( otherAccount.address )
 
 			})
 
@@ -1349,6 +1395,15 @@ describe("MetalorianSwap", function () {
 				await expect(
 					metaSwap.setProtocolFee( 10 )
 				).to.emit( metaSwap, "NewProtocolFee" ).withArgs( owner.address, 10 )
+			})
+
+			it("7. NewFeeRecipient", async () => {
+				
+				const { metaSwap, otherAccount } = await loadFixture( deployMetalorianSwap )
+
+				await expect(
+					metaSwap.setFeeRecipient( otherAccount.address )
+				).to.emit( metaSwap, "NewFeeRecipient" ).withArgs( otherAccount.address )
 			})
 
 		})

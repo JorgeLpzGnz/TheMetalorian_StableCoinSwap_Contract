@@ -14,22 +14,24 @@ async function main() {
 
   const MetalorianSwap = await ethers.getContractFactory("MetalorianSwap");
 
-  const MS_USDT_USDC = await MetalorianSwap.deploy( USDT, USDC, "USDTUSDC_LP" );
+  const recipient = ""
+
+  const MS_USDT_USDC = await MetalorianSwap.deploy( USDT, USDC, "USDTUSDC_LP", recipient );
   await MS_USDT_USDC.deployed();
 
   console.log( `POOL USDT / USDC DEPLOYED, ADDRESS: ${MS_USDT_USDC.address}`);
 
-  const MS_USDC_BUSD = await MetalorianSwap.deploy( USDC, BUSD, "USDCBUSD_LP" );
+  const MS_USDC_BUSD = await MetalorianSwap.deploy( USDC, BUSD, "USDCBUSD_LP", recipient );
   await MS_USDC_BUSD.deployed();
 
   console.log( `POOL USDC / BUSD DEPLOYED, ADDRESS: ${MS_USDC_BUSD.address}`);
 
-  const MS_BUSD_USDT = await MetalorianSwap.deploy( BUSD, USDT, "BUSDUSDT_LP" );
+  const MS_BUSD_USDT = await MetalorianSwap.deploy( BUSD, USDT, "BUSDUSDT_LP", recipient );
   await MS_BUSD_USDT.deployed();
 
   console.log( `POOL BUSD / USDT DEPLOYED, ADDRESS: ${MS_BUSD_USDT.address}`);
 
-  const MS_USDT_DAI = await MetalorianSwap.deploy( USDT, DAI, "USDTDAI_LP" );
+  const MS_USDT_DAI = await MetalorianSwap.deploy( USDT, DAI, "USDTDAI_LP", recipient );
   await MS_USDT_DAI.deployed();
 
   console.log( `POOL USDT / DAI DEPLOYED, ADDRESS: ${MS_USDT_DAI.address}`);
