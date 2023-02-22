@@ -1,5 +1,7 @@
 const hre = require("hardhat");
 
+const recipient = "0x43d903211aE9AFDbDa240e39FCaEB5dD7558e05B"
+
 async function main() {
 
   const USDT = "0xdAC17F958D2ee523a2206206994597C13D831ec7"
@@ -13,8 +15,6 @@ async function main() {
   // const testDAI = "0xD7961411DD94Cf52d6d32DB3600a8D08c57495D8"
 
   const MetalorianSwap = await ethers.getContractFactory("MetalorianSwap");
-
-  const recipient = ""
 
   const MS_USDT_USDC = await MetalorianSwap.deploy( USDT, USDC, "USDTUSDC_LP", recipient );
   await MS_USDT_USDC.deployed();

@@ -36,6 +36,8 @@ describe("MetalorianSwap", function () {
 		// const BUSDf = await ethers.getContractFactory("BinanceUSD");
 		// const BUSD = await BUSDf.deploy();
 
+		// this contracts are only tests implementation
+
 		const USDT = new ethers.Contract(
 			"0x948D917067BEF88203B095EcDFb92573401Ce7CE",
 			tokensABI,
