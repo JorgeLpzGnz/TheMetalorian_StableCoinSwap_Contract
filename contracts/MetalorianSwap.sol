@@ -396,6 +396,8 @@ contract MetalorianSwap is ERC20, Ownable {
     /// @return bool returns true on success transaction
     function swap( address _tokenIn, uint _amountIn, uint _minAmountOut ) public isActive returns ( bool ) {
 
+        // input token must be one of two the pool tokens
+
         require( _tokenIn == address(token1) || _tokenIn == address(token2), "Trade Error: invalid token");
 
         bool isToken1 = _tokenIn == address(token1);
@@ -404,15 +406,25 @@ contract MetalorianSwap is ERC20, Ownable {
             ? ( token1, token2, totalToken1, totalToken2 )
             : ( token2, token1, totalToken2, totalToken1 );
 
+        // get trade amounts
+
         ( uint amountIn, uint amountOut, uint creatorFee ) = estimateSwap( _amountIn, _totalTokenIn, _totalTokenOut );
 
         require( amountOut >= _minAmountOut, "Trade Error: Output amount is less than expected");
+
+        // send the protocol fee
         
         tokenIn.safeTransferFrom( msg.sender, feeRecipient, _handleDecimals( creatorFee, tokenIn.decimals() ) );
 
+        // receive the input tokens
+
         tokenIn.safeTransferFrom( msg.sender, address( this ), _handleDecimals( amountIn, tokenIn.decimals() ) );
 
+        // send the tokens to the user
+
         tokeOut.safeTransfer( msg.sender, _handleDecimals( amountOut, tokeOut.decimals() ) );
+
+        // update current balances
 
         if ( isToken1 ) _updateBalances( totalToken1 + amountIn, totalToken2 - amountOut );
 
