@@ -1,4 +1,5 @@
 [
+    "function owner() public view returns(address owner)",
     "event Transfer(address indexed from, address indexed to, uint256 value)",
     "event Approval(address indexed owner, address indexed spender, uint256 value)",
     "function totalSupply() external view returns (uint256)",
@@ -10,5 +11,14 @@
     "function name() external view returns (string memory)",
     "function symbol() external view returns (string memory)",
     "function decimals() external view returns (uint8)",
-    "function mint( uint _amount ) public returns ( bool )"
+    "function issue(uint amount) public",
+    "function configureMinter(address minter, uint256 minterAllowedAmount) external returns (bool)",
+    "function mint(address _to, uint256 _amount) external returns (bool)",
+    "function reclaimBUSD() external",
+    "function isMinter(address account) external view returns (bool)",
+    "function masterMinter() public view returns (address)",
+    "function increaseSupply(uint256 _value) public returns (bool success)",
+    "function supplyController() public view returns (address)",
+    "function minterAllowance( address ) public view returns (uint256)",
+    "function wards( address ) public view returns ( uint256 )"
 ]

@@ -3,7 +3,14 @@ require("@nomicfoundation/hardhat-toolbox");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.17",
+  solidity: {
+	compilers: [
+		{ version: "0.8.17" },
+		{ version: "0.4.17" },
+		{ version: "0.4.24" },
+		{ version: "0.5.12" }
+	]
+  },
   networks: {
 		mainnet: {
 			url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
@@ -15,7 +22,7 @@ module.exports = {
 		},
     hardhat: {
       forking: {
-        url: `https://goerli.infura.io/v3/${process.env.INFURA_KEY}`
+        url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`
       }
     }
   },

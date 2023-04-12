@@ -3,12 +3,15 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @title MetalorianSwap a USD stablecoin Pool
 /// @author JorgeLpzGnz & CarlosMario714
 /// @notice A Liquidity protocol based in the CPAMM ( Constant product Automated Market Maker ) 
 contract MetalorianSwap is ERC20, Ownable {
+
+    using SafeERC20 for IERC20Metadata;
 
     /**************************************************************/
     /********************* POOL DATA ******************************/
@@ -349,9 +352,9 @@ contract MetalorianSwap is ERC20, Ownable {
 
         uint _shares = estimateShares( _amountToken1, _amountToken2 );
 
-        require(token1.transferFrom( msg.sender, address( this ), _handleDecimals( _amountToken1, token1.decimals() ) ));
+        token1.safeTransferFrom( msg.sender, address( this ), _handleDecimals( _amountToken1, token1.decimals() ) );
 
-        require(token2.transferFrom( msg.sender, address( this ), _handleDecimals( _amountToken2, token2.decimals()) ));
+        token2.safeTransferFrom( msg.sender, address( this ), _handleDecimals( _amountToken2, token2.decimals() ) );
 
         _mint( msg.sender, _shares );
 
@@ -372,9 +375,9 @@ contract MetalorianSwap is ERC20, Ownable {
 
         require( amount1 > 0 && amount2 > 0, "Withdraw Error: amounts with zero value");
 
-        require( token1.transfer( msg.sender, _handleDecimals( amount1, token1.decimals() )  ) );
+        token1.safeTransfer( msg.sender, _handleDecimals( amount1, token1.decimals() )  );
 
-        require( token2.transfer( msg.sender, _handleDecimals( amount2, token2.decimals() ) ) );
+        token2.safeTransfer( msg.sender, _handleDecimals( amount2, token2.decimals() ) );
 
         _burn( msg.sender, _shares);
 
@@ -389,8 +392,9 @@ contract MetalorianSwap is ERC20, Ownable {
     /// @notice trade tokens
     /// @param _tokenIn address of the input token 
     /// @param _amountIn amount of input token
+    /// @param _minAmountOut The minimum expected that the pool will return to the user
     /// @return bool returns true on success transaction
-    function swap( address _tokenIn, uint _amountIn ) public isActive returns ( bool ) {
+    function swap( address _tokenIn, uint _amountIn, uint _minAmountOut ) public isActive returns ( bool ) {
 
         require( _tokenIn == address(token1) || _tokenIn == address(token2), "Trade Error: invalid token");
 
@@ -401,12 +405,14 @@ contract MetalorianSwap is ERC20, Ownable {
             : ( token2, token1, totalToken2, totalToken1 );
 
         ( uint amountIn, uint amountOut, uint creatorFee ) = estimateSwap( _amountIn, _totalTokenIn, _totalTokenOut );
+
+        require( amountOut >= _minAmountOut, "Trade Error: Output amount is less than expected");
         
-        require( tokenIn.transferFrom( msg.sender, feeRecipient, _handleDecimals( creatorFee, tokenIn.decimals() ) ));
+        tokenIn.safeTransferFrom( msg.sender, feeRecipient, _handleDecimals( creatorFee, tokenIn.decimals() ) );
 
-        require( tokenIn.transferFrom( msg.sender, address( this ), _handleDecimals( amountIn, tokenIn.decimals() ) ));
+        tokenIn.safeTransferFrom( msg.sender, address( this ), _handleDecimals( amountIn, tokenIn.decimals() ) );
 
-        require( tokeOut.transfer( msg.sender, _handleDecimals( amountOut, tokeOut.decimals() ) ));
+        tokeOut.safeTransfer( msg.sender, _handleDecimals( amountOut, tokeOut.decimals() ) );
 
         if ( isToken1 ) _updateBalances( totalToken1 + amountIn, totalToken2 - amountOut );
 
